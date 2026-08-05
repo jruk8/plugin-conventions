@@ -7,7 +7,7 @@ plugins {
     id 'pl.allegro.tech.build.axion-release' version '1.21.2'
 }
 
-group = 'com.jruk8'
+group = 'io.github.jruk8'
 
 scmVersion {
     tag {
@@ -45,7 +45,7 @@ gradlePlugin {
     vcsUrl = 'https://github.com/jruk8/plugin-conventions'
     plugins {
         pluginConventions {
-            id = 'com.jruk8.plugin-conventions'
+            id = 'io.github.jruk8.plugin-conventions'
             implementationClass = 'com.jruk8.gradle.PluginConventionsPlugin'
             displayName = 'jruk8 Plugin Conventions'
             description = 'Shared Paper plugin conventions for jruk8 projects'
