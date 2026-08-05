@@ -2,6 +2,7 @@ plugins {
     id 'groovy'
     id 'java-gradle-plugin'
     id 'maven-publish'
+    id 'com.gradle.plugin-publish' version '1.2.1'
     id 'checkstyle'
     id 'pl.allegro.tech.build.axion-release' version '1.21.2'
 }
@@ -40,10 +41,15 @@ dependencies {
 }
 
 gradlePlugin {
+    website = 'https://github.com/jruk8/plugin-conventions'
+    vcsUrl = 'https://github.com/jruk8/plugin-conventions'
     plugins {
         pluginConventions {
             id = 'com.jruk8.plugin-conventions'
             implementationClass = 'com.jruk8.gradle.PluginConventionsPlugin'
+            displayName = 'jruk8 Plugin Conventions'
+            description = 'Shared Paper plugin conventions for jruk8 projects'
+            tags = ['conventions', 'jruk8']
         }
     }
 }
@@ -68,17 +74,4 @@ test {
 
 check {
     dependsOn 'checkstyleMain', 'checkstyleTest'
-}
-
-publishing {
-    repositories {
-        maven {
-            name = 'GitHubPackages'
-            url = uri('https://maven.pkg.github.com/jruk8/plugin-conventions')
-            credentials {
-                username = System.getenv('GITHUB_ACTOR') ?: (project.findProperty('gpr.user') ?: '')
-                password = System.getenv('GITHUB_TOKEN') ?: (project.findProperty('gpr.key') ?: '')
-            }
-        }
-    }
 }
