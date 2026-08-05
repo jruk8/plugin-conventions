@@ -3,7 +3,7 @@
 Shared Gradle convention plugin and reusable GitHub Actions workflows for
 jruk8 Paper/Bukkit Minecraft plugins.
 
-This repository encapsulates the build configuration that was previously
+This repository encapsulates the build configuration previously
 duplicated across every plugin repository: Java 25 toolchain, Checkstyle,
 Shadow + bstats relocation, axion-release versioning, repository
 declarations, dependency defaults, `plugin.yml` resource expansion, and the
