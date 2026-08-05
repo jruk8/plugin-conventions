@@ -1,0 +1,217 @@
+name: Publish
+
+on:
+  workflow_call:
+    inputs:
+      java-version:
+        type: string
+        default: '25'
+        required: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up JDK ${{ inputs.java-version }}
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: ${{ inputs.java-version }}
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x ./gradlew
+
+      - name: Build
+        run: ./gradlew build
+
+      - name: Detect if this commit has a v* tag
+        id: tag-check
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Check if current commit (HEAD) has any v*.*.* tag
+          if git describe --tags --exact-match --match 'v*' HEAD >/dev/null 2>&1; then
+            echo "has_v_tag=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_v_tag=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Generate changelog
+        id: changelog
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          current_tag="${GITHUB_REF_NAME}"
+
+          # Find the latest v* tag (if any)
+          latest_v_tag="$(git tag --sort=-version:refname --list 'v*' | head -n 1 || true)"
+
+          if [[ "${{ steps.tag-check.outputs.has_v_tag }}" == "true" ]]; then
+            # We are on a v* tag: find previous v* tag for changelog range
+            previous_tag="$(git tag --sort=-version:refname --list 'v*' | grep -Fxv "$current_tag" | grep -v -i 'SNAPSHOT' | head -n 1 || true)"
+            if [ -n "$previous_tag" ]; then
+              range="${previous_tag}..HEAD"
+            else
+              range="HEAD"
+            fi
+          else
+            # Not on a v* tag (snapshot): changelog from latest v* tag to HEAD
+            if [ -n "$latest_v_tag" ]; then
+              range="${latest_v_tag}..HEAD"
+            else
+              # No v* tags yet: use all history
+              range="HEAD"
+            fi
+          fi
+
+          notes="$(git log --no-merges --pretty=format:'- %s' "$range" 2>/dev/null || true)"
+          if [ -z "$notes" ]; then
+            notes="- No commit messages available."
+          fi
+
+          delimiter="$(openssl rand -hex 8)"
+          {
+            echo "notes<<${delimiter}"
+            echo "$notes"
+            echo "${delimiter}"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Compute current version (axion)
+        id: version
+        if: ${{ github.ref == 'refs/heads/main' && steps.tag-check.outputs.has_v_tag == 'false' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="$(./gradlew -q -Prelease.quiet currentVersion | tail -n 1 | tr -d '[:space:]')"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      # ---------- Modrinth: only on real v* tags ----------
+      - name: Publish to Modrinth
+        if: ${{ vars.MODRINTH_ID != '' && startsWith(github.ref, 'refs/tags/v') && steps.tag-check.outputs.has_v_tag == 'true' && !contains(github.ref_name, 'SNAPSHOT') }}
+        uses: Kir-Antipov/mc-publish@v3
+        with:
+          fail-mode: warn
+          modrinth-id: ${{ vars.MODRINTH_ID }}
+          modrinth-token: ${{ secrets.MODRINTH_TOKEN }}
+          files: |
+            build/libs/!(*-plain|*-sources|*-dev).jar
+          loaders: ${{ vars.MODRINTH_LOADERS }}
+          game-versions: ${{ vars.MODRINTH_GAME_VERSIONS }}
+          version: ${{ github.ref_name }}
+          name: ${{ github.event.repository.name }} ${{ github.ref_name }}
+          changelog: ${{ steps.changelog.outputs.notes }}
+
+      # ---------- GitHub release ----------
+      # Full release on v* tags
+      - name: Publish GitHub Release (full)
+        if: ${{ startsWith(github.ref, 'refs/tags/v') && steps.tag-check.outputs.has_v_tag == 'true' }}
+        uses: softprops/action-gh-release@v3
+        with:
+          files: build/libs/*.jar
+          token: ${{ secrets.GH_RELEASE_TOKEN }}
+          body: ${{ steps.changelog.outputs.notes }}
+          tag_name: ${{ github.ref_name }}
+          name: ${{ github.event.repository.name }} ${{ github.ref_name }}
+          prerelease: false
+          draft: false
+
+      # ---------- Snapshot cleanup on release ----------
+      # If the latest release has no commits after it, the snapshot build is identical
+      # to the release, so the snapshot pre-release is redundant and can be deleted.
+      - name: Check if there are commits after the release tag
+        id: release-tip-check
+        if: ${{ steps.tag-check.outputs.has_v_tag == 'true' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # Make sure the main tip is up to date for comparison
+          git fetch origin main --quiet
+
+          tagged_commit="$(git rev-parse HEAD)"
+          latest_main="$(git rev-parse origin/main)"
+
+          if [ "$tagged_commit" = "$latest_main" ]; then
+            echo "no_commits_after=true" >> "$GITHUB_OUTPUT"
+            echo "Release tag is the latest commit on main; snapshot is identical to the release."
+          else
+            echo "no_commits_after=false" >> "$GITHUB_OUTPUT"
+            echo "There are commits after the release tag; keeping the snapshot."
+          fi
+
+      - name: Delete snapshot release (no commits after latest release)
+        if: ${{ steps.tag-check.outputs.has_v_tag == 'true' && steps.release-tip-check.outputs.no_commits_after == 'true' }}
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GH_RELEASE_TOKEN }}
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+
+            const releases = await github.paginate(
+              github.rest.repos.listReleases,
+              { owner, repo }
+            );
+
+            const snapshotRelease = releases.find(r => r.tag_name === "latest-snapshot");
+            if (snapshotRelease) {
+              await github.rest.repos.deleteRelease({
+                owner,
+                repo,
+                release_id: snapshotRelease.id
+              });
+              console.log("Deleted snapshot release:", snapshotRelease.id);
+            } else {
+              console.log("No snapshot release found; nothing to delete.");
+            }
+
+      - name: Delete previous snapshot release
+        if: ${{ github.ref == 'refs/heads/main' && steps.tag-check.outputs.has_v_tag == 'false' }}
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GH_RELEASE_TOKEN }}
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+
+            const releases = await github.paginate(
+              github.rest.repos.listReleases,
+              { owner, repo }
+            );
+
+            const snapshotRelease = releases.find(r => r.tag_name === "latest-snapshot");
+            if (snapshotRelease) {
+              await github.rest.repos.deleteRelease({
+                owner,
+                repo,
+                release_id: snapshotRelease.id
+              });
+              console.log("Deleted previous snapshot release:", snapshotRelease.id);
+            } else {
+              console.log("No previous snapshot release found; nothing to delete.");
+            }
+
+      - name: Publish GitHub Pre-release (snapshot)
+        if: ${{ github.ref == 'refs/heads/main' && steps.tag-check.outputs.has_v_tag == 'false' }}
+        uses: softprops/action-gh-release@v3
+        with:
+          files: build/libs/*.jar
+          token: ${{ secrets.GH_RELEASE_TOKEN }}
+          body: ${{ steps.changelog.outputs.notes }}
+          tag_name: latest-snapshot
+          name: "v${{ steps.version.outputs.version }}"
+          prerelease: true
+          draft: false
