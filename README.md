@@ -6,8 +6,9 @@ jruk8 Paper/Bukkit Minecraft plugins.
 This repository encapsulates the build configuration previously
 duplicated across every plugin repository: Java 25 toolchain, Checkstyle,
 Shadow + bstats relocation, axion-release versioning, repository
-declarations, dependency defaults, `plugin.yml` resource expansion, and the
-full publish pipeline (Modrinth, GitHub Releases, snapshot management).
+declarations, dependency defaults, `plugin.yml` resource expansion, and
+reusable GitHub Actions workflows for publishing consuming plugins
+(Modrinth, GitHub Releases, snapshot management).
 
 ## Versioning
 
@@ -17,27 +18,22 @@ Versions are derived from git tags via [axion-release](https://github.com/allegr
 - **Snapshots** are built from `main` and suffixed with `-SNAPSHOT.<GITHUB_RUN_NUMBER>`
   in CI.
 
-The convention plugin is published to **GitHub Packages** (Maven registry).
-It is **not** published to Modrinth — only the consuming plugins are.
+The convention plugin is distributed via **JitPack**, which builds
+artifacts on-demand from git tags. It is **not** published to Modrinth —
+only the consuming plugins are.
 
 ## Consuming the convention plugin
 
 ### 1. `settings.gradle`
 
 Add a `pluginManagement` block so Gradle can resolve the convention plugin
-from GitHub Packages:
+from JitPack:
 
 ```groovy
 pluginManagement {
     repositories {
         gradlePluginPortal()
-        maven {
-            url = 'https://maven.pkg.github.com/jruk8/plugin-conventions'
-            credentials {
-                username = System.getenv('GITHUB_ACTOR') ?: providers.gradleProperty('gpr.user').getOrElse('jruk8')
-                password = System.getenv('GITHUB_TOKEN') ?: providers.gradleProperty('gpr.key').getOrElse('')
-            }
-        }
+        maven { url = 'https://jitpack.io' }
     }
 }
 
@@ -121,21 +117,9 @@ checkstyle configuration is now bundled inside the convention plugin jar.
 
 ## Authentication
 
-### CI (GitHub Actions)
-
-The reusable workflows use the default `GITHUB_TOKEN` for authentication.
-No additional secrets are needed for resolving the convention plugin.
-
-### Local development
-
-To resolve the convention plugin from GitHub Packages locally, create a
-GitHub Personal Access Token (PAT) with the `read:packages` scope, then add
-it to your `~/.gradle/gradle.properties`:
-
-```properties
-gpr.user=jruk8
-gpr.key=ghp_your_personal_access_token_here
-```
+JitPack builds and serves artifacts from public git repositories without
+requiring any authentication. No tokens or credentials are needed to
+resolve the convention plugin.
 
 ## Cutting a release
 
@@ -148,10 +132,11 @@ git push origin v1.0.1
 ```
 
 The `release.yml` workflow in this repo will:
-- Build and publish the convention plugin to GitHub Packages.
+- Build the convention plugin.
 - Create a GitHub Release with the changelog.
 - Clean up any previous snapshot release.
 
+JitPack automatically detects the new tag and builds the artifact on-demand.
 After the release is published, update the version reference in all
 consuming plugins' `build.gradle` and workflow `uses:` lines.
 

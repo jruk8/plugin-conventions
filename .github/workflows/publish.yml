@@ -1,3 +1,9 @@
+# This is a REUSABLE workflow intended to be called by CONSUMING plugin
+# repositories (e.g. JBlockGlitch). It is NOT used to publish this convention
+# plugin itself — that is now handled by JitPack, which builds from git tags.
+#
+# Consuming repos reference it via:
+#   uses: jruk8/plugin-conventions/.github/workflows/publish.yml@v1.0.0
 name: Publish
 
 on:
