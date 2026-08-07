@@ -14,13 +14,19 @@ reusable GitHub Actions workflows for publishing consuming plugins
 
 Versions are derived from git tags via [axion-release](https://github.com/allegro/axion-release).
 
-- **Stable releases** are tagged `v<version>` (e.g. `v1.0.0`).
+- **Stable releases** are tagged `v<version>` (e.g. `v1.1.5`).
 - **Snapshots** are built from `main` and suffixed with `-SNAPSHOT.<GITHUB_RUN_NUMBER>`
   in CI.
 
 The convention plugin is distributed via **JitPack**, which builds
 artifacts on-demand from git tags. It is **not** published to Modrinth —
 only the consuming plugins are.
+
+> **Note on the plugin `version` field:** unlike most Gradle plugins, the
+> `version` in the `plugins {}` block below must include the `v` prefix
+> (e.g. `version 'v1.1.5'`, not `version '1.1.5'`). This matches the raw
+> git tag name and is required for JitPack to resolve the plugin marker
+> artifact correctly — this is intentional, not a typo.
 
 ## Consuming the convention plugin
 
@@ -46,7 +52,7 @@ Replace the entire build file with a single plugin declaration:
 
 ```groovy
 plugins {
-    id 'com.jruk8.plugin-conventions' version '1.0.0'
+    id 'com.github.jruk8.plugin-conventions' version 'v1.1.5'
 }
 ```
 
@@ -87,7 +93,7 @@ on: [push, pull_request]
 
 jobs:
   build:
-    uses: jruk8/plugin-conventions/.github/workflows/build.yml@v1.0.0
+    uses: jruk8/plugin-conventions/.github/workflows/build.yml@v1.1.5
 ```
 
 ```yaml
@@ -99,9 +105,13 @@ on:
     branches: [main]
     tags: ['v*']
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   publish:
-    uses: jruk8/plugin-conventions/.github/workflows/publish.yml@v1.0.0
+    uses: jruk8/plugin-conventions/.github/workflows/publish.yml@v1.1.5
     secrets: inherit
 ```
 
@@ -127,8 +137,8 @@ resolve the convention plugin.
 2. Create and push a tag:
 
 ```bash
-git tag v1.0.1
-git push origin v1.0.1
+git tag v1.1.6
+git push origin v1.1.6
 ```
 
 The `release.yml` workflow in this repo will:
@@ -138,7 +148,9 @@ The `release.yml` workflow in this repo will:
 
 JitPack automatically detects the new tag and builds the artifact on-demand.
 After the release is published, update the version reference in all
-consuming plugins' `build.gradle` and workflow `uses:` lines.
+consuming plugins' `build.gradle` (with the `v` prefix, see note above)
+and workflow `uses:` lines (also with the `v` prefix — this one follows
+normal git ref conventions).
 
 ## What the convention plugin does
 
