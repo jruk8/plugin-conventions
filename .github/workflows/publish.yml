@@ -130,7 +130,7 @@ jobs:
           token: ${{ secrets.GH_RELEASE_TOKEN }}
           body: ${{ steps.changelog.outputs.notes }}
           tag_name: ${{ github.ref_name }}
-          name: ${{ github.event.repository.name }} ${{ github.ref_name }}
+          name: ${{ github.ref_name }}
           prerelease: false
           draft: false
 
