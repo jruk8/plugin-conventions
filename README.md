@@ -111,6 +111,9 @@ concurrency:
 
 jobs:
   publish:
+    permissions:
+      contents: write
+      packages: read
     uses: jruk8/plugin-conventions/.github/workflows/publish.yml@v1.1.5
     secrets: inherit
 ```

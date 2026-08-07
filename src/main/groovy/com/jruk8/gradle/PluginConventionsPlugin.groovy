@@ -88,10 +88,30 @@ class PluginConventionsPlugin implements Plugin<Project> {
         }
 
         // --- Checkstyle ---
-        File checkstyleFile = extractCheckstyleConfig(project)
         def checkstyleExt = project.extensions.getByName('checkstyle')
         checkstyleExt.toolVersion = '10.17.0'
+
+        File checkstyleFile = new File(project.layout.buildDirectory.get().asFile, 'checkstyle/checkstyle.xml')
         checkstyleExt.configFile = checkstyleFile
+
+        def extractCheckstyleConfigTask = project.tasks.register('extractCheckstyleConfig') {
+            outputs.file(checkstyleFile)
+            doLast {
+                checkstyleFile.parentFile.mkdirs()
+                InputStream resource = PluginConventionsPlugin.class.getResourceAsStream('/checkstyle.xml')
+                if (resource == null) {
+                    throw new GradleException('Bundled checkstyle.xml not found on plugin classpath.')
+                }
+                resource.withStream { input ->
+                    checkstyleFile.withOutputStream { output ->
+                        output << input
+                    }
+                }
+            }
+        }
+
+        project.tasks.named('checkstyleMain').configure { dependsOn extractCheckstyleConfigTask }
+        project.tasks.named('checkstyleTest').configure { dependsOn extractCheckstyleConfigTask }
 
         // --- Compile options ---
         project.tasks.withType(JavaCompile).configureEach {
@@ -104,7 +124,7 @@ class PluginConventionsPlugin implements Plugin<Project> {
             project.tasks.named('shadowJar').configure {
                 configurations = [project.configurations.runtimeClasspath]
                 dependencies {
-                    include(dependency('org.bstats:bstats-bukkit:3.2.1'))
+                    include(dependency('org.bstats:.*:.*'))
                 }
                 relocate('org.bstats', pluginGroup)
                 archiveClassifier = ''
@@ -152,26 +172,5 @@ class PluginConventionsPlugin implements Plugin<Project> {
                 )
             }
         }
-    }
-
-    /**
-     * Extracts the bundled {@code checkstyle.xml} from this plugin's jar to a file under the
-     * consuming project's build directory so that the checkstyle extension can reference it.
-     */
-    private static File extractCheckstyleConfig(Project project) {
-        File target = new File(project.layout.buildDirectory.get().asFile, 'checkstyle/checkstyle.xml')
-        if (!target.exists()) {
-            target.parentFile.mkdirs()
-            InputStream resource = PluginConventionsPlugin.class.getResourceAsStream('/checkstyle.xml')
-            if (resource == null) {
-                throw new GradleException('Bundled checkstyle.xml not found on plugin classpath.')
-            }
-            resource.withStream { input ->
-                target.withOutputStream { output ->
-                    output << input
-                }
-            }
-        }
-        return target
     }
 }
