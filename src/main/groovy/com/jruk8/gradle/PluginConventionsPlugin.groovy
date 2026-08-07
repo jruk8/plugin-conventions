@@ -65,6 +65,13 @@ class PluginConventionsPlugin implements Plugin<Project> {
 
         project.version = scmVersionExt.version
 
+        // If we're building locally (not CI) and the work tree has staged or unstaged
+        // changes, force a -SNAPSHOT version even when HEAD sits exactly on a release tag.
+        // Axion only accounts for commit position relative to tags, not working-tree state.
+        if (isLocalDirtyBuild(project) && !project.version.toString().contains('-SNAPSHOT')) {
+            project.version = "${project.version}-SNAPSHOT"
+        }
+
         // --- Java toolchain ---
         def javaExt = project.extensions.getByName('java')
         javaExt.toolchain {
@@ -160,6 +167,25 @@ class PluginConventionsPlugin implements Plugin<Project> {
             filesMatching('plugin.yml') {
                 expand(pluginProperties)
             }
+        }
+    }
+
+    /**
+     * Returns true if this is a local (non-CI) build and the working tree has staged
+     * or unstaged changes relative to HEAD.
+     */
+    private static boolean isLocalDirtyBuild(Project project) {
+        boolean isCiBuild = System.getenv('GITHUB_RUN_NUMBER') != null
+        if (isCiBuild) {
+            return false
+        }
+        try {
+            Process process = ['git', 'status', '--porcelain'].execute(null, project.projectDir)
+            process.waitFor()
+            return process.text.trim().length() > 0
+        } catch (IOException ignored) {
+            // git not available / not a git repo — treat as clean rather than fail the build
+            return false
         }
     }
 

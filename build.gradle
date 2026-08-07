@@ -20,7 +20,18 @@ scmVersion {
     }
 }
 
+def isWorkTreeDirty = {
+    def process = ['git', 'status', '--porcelain'].execute(null, project.projectDir)
+    process.waitFor()
+    return process.text.trim().length() > 0
+}
+
+def isCiBuild = System.getenv('GITHUB_RUN_NUMBER') != null
+
 project.version = scmVersion.version
+if (!isCiBuild && isWorkTreeDirty() && !project.version.toString().contains('-SNAPSHOT')) {
+    project.version = "${project.version}-SNAPSHOT"
+}
 
 java {
     toolchain {
