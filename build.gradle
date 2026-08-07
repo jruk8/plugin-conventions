@@ -44,7 +44,7 @@ gradlePlugin {
     vcsUrl = 'https://github.com/jruk8/plugin-conventions'
     plugins {
         pluginConventions {
-            id = 'io.github.jruk8.plugin-conventions'
+            id = 'com.github.jruk8.plugin-conventions'
             implementationClass = 'com.jruk8.gradle.PluginConventionsPlugin'
             displayName = 'jruk8 Plugin Conventions'
             description = 'Shared Paper plugin conventions for jruk8 projects'
