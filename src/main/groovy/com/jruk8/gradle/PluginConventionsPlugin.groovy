@@ -66,10 +66,9 @@ class PluginConventionsPlugin implements Plugin<Project> {
         project.version = scmVersionExt.version
 
         // --- Java toolchain ---
-        project.extensions.configure('java') {
-            toolchain {
-                languageVersion = JavaLanguageVersion.of(25)
-            }
+        def javaExt = project.extensions.getByName('java')
+        javaExt.toolchain {
+            languageVersion = JavaLanguageVersion.of(25)
         }
 
         // --- Repositories ---
