@@ -2,10 +2,11 @@ plugins {
     id 'groovy'
     id 'java-gradle-plugin'
     id 'checkstyle'
+    id 'maven-publish'
     id 'pl.allegro.tech.build.axion-release' version '1.21.2'
 }
 
-group = 'io.github.jruk8'
+group = 'com.github.jruk8'
 
 scmVersion {
     tag {
