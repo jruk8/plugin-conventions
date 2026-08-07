@@ -47,9 +47,8 @@ class PluginConventionsPlugin implements Plugin<Project> {
         project.group = pluginGroup
 
         // --- Axion versioning ---
-        // Critical: configure scmVersion *before* reading .version, otherwise the
-        // snapshotCreator closure is ignored and you get the default -SNAPSHOT suffix.
-        project.extensions.configure('scmVersion') {
+        def scmVersionExt = project.extensions.getByName('scmVersion')
+        Closure scmVersionConfig = {
             tag {
                 prefix = 'v'
                 versionSeparator = ''
@@ -60,7 +59,11 @@ class PluginConventionsPlugin implements Plugin<Project> {
                 return suffix ? ("-SNAPSHOT." + suffix) : "-SNAPSHOT"
             }
         }
-        project.version = project.extensions.scmVersion.version
+        scmVersionConfig.delegate = scmVersionExt
+        scmVersionConfig.resolveStrategy = Closure.DELEGATE_FIRST
+        scmVersionConfig()
+
+        project.version = scmVersionExt.version
 
         // --- Java toolchain ---
         project.extensions.configure('java') {
@@ -85,12 +88,11 @@ class PluginConventionsPlugin implements Plugin<Project> {
             testRuntimeOnly 'org.junit.platform:junit-platform-launcher:1.10.2'
         }
 
-        // --- Checkstyle (shared config bundled in this plugin's jar) ---
+        // --- Checkstyle ---
         File checkstyleFile = extractCheckstyleConfig(project)
-        project.extensions.configure('checkstyle') {
-            toolVersion = '10.17.0'
-            configFile = checkstyleFile
-        }
+        def checkstyleExt = project.extensions.getByName('checkstyle')
+        checkstyleExt.toolVersion = '10.17.0'
+        checkstyleExt.configFile = checkstyleFile
 
         // --- Compile options ---
         project.tasks.withType(JavaCompile).configureEach {
