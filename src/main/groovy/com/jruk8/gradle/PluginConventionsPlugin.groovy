@@ -56,12 +56,17 @@ class PluginConventionsPlugin implements Plugin<Project> {
             snapshotCreator { version, position -> /* unchanged */ }
 
             versionIncrementer { context ->
-                String range = context.position.latestTag ? "${context.position.latestTag}..HEAD" : "HEAD"
-
-                Process proc = ['git', 'log', '--no-merges', '--pretty=format:%s%n%b%n===END===', range]
+                Process tagProc = ['git', 'tag', '--sort=-version:refname', '--list', 'v*', '--merged', 'HEAD', '--no-contains', 'HEAD']
                         .execute(null, project.projectDir)
-                proc.waitFor()
-                String commits = proc.text
+                tagProc.waitFor()
+                String previousTag = tagProc.text.readLines().find { it?.trim() }?.trim()
+
+                String range = previousTag ? "${previousTag}..HEAD" : "HEAD"
+
+                Process logProc = ['git', 'log', '--no-merges', '--pretty=format:%s%n%b%n===END===', range]
+                        .execute(null, project.projectDir)
+                logProc.waitFor()
+                String commits = logProc.text
 
                 boolean isMajor = commits =~ /(?m)^\w+(\([^)]*\))?!:/ || commits.contains('BREAKING CHANGE:') || commits.contains('BREAKING-CHANGE:')
                 boolean isMinor = commits =~ /(?m)^feat(\([^)]*\))?:/
@@ -74,7 +79,6 @@ class PluginConventionsPlugin implements Plugin<Project> {
                 } else if (isPatch) {
                     return context.currentVersion.incrementPatchVersion()
                 } else {
-                    // no feat/fix/breaking commits since last tag — safe default
                     return context.currentVersion.incrementPatchVersion()
                 }
             }
