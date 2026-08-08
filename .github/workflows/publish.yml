@@ -68,7 +68,7 @@ jobs:
         uses: orhun/git-cliff-action@v4
         with:
           config: cliff.toml
-          args: --tag ${{ github.ref_name }} --prepend CHANGELOG.md
+          args: --tag ${{ github.ref_name }} --latest --prepend CHANGELOG.md
 
       - name: Commit CHANGELOG.md
         if: ${{ steps.tag-check.outputs.has_v_tag == 'true' }}
