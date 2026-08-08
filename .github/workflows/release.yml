@@ -11,6 +11,9 @@ concurrency:
 
 jobs:
   release:
+    permissions:
+      contents: write
+      packages: read
     uses: ./.github/workflows/publish.yml
     with:
       java-version: '25'
