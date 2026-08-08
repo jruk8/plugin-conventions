@@ -13,10 +13,30 @@ scmVersion {
         prefix = 'v'
         versionSeparator = ''
     }
-    snapshotCreator { version, position ->
-        def ciBuild = System.getenv('GITHUB_RUN_NUMBER')
-        def suffix = ciBuild ?: ""
-        return suffix ? ("-SNAPSHOT." + suffix) : "-SNAPSHOT"
+    snapshotCreator { version, position -> /* unchanged */ }
+
+    versionIncrementer { context ->
+        String range = context.position.latestTag ? "${context.position.latestTag}..HEAD" : "HEAD"
+
+        Process proc = ['git', 'log', '--no-merges', '--pretty=format:%s%n%b%n===END===', range]
+                .execute(null, project.projectDir)
+        proc.waitFor()
+        String commits = proc.text
+
+        boolean isMajor = commits =~ /(?m)^\w+(\([^)]*\))?!:/ || commits.contains('BREAKING CHANGE:') || commits.contains('BREAKING-CHANGE:')
+        boolean isMinor = commits =~ /(?m)^feat(\([^)]*\))?:/
+        boolean isPatch = commits =~ /(?m)^fix(\([^)]*\))?:/
+
+        if (isMajor) {
+            return context.currentVersion.incrementMajorVersion()
+        } else if (isMinor) {
+            return context.currentVersion.incrementMinorVersion()
+        } else if (isPatch) {
+            return context.currentVersion.incrementPatchVersion()
+        } else {
+            // no feat/fix/breaking commits since last tag — safe default
+            return context.currentVersion.incrementPatchVersion()
+        }
     }
 }
 
