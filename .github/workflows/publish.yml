@@ -56,44 +56,28 @@ jobs:
 
       - name: Generate changelog
         id: changelog
-        shell: bash
+        uses: orhun/git-cliff-action@v4
+        with:
+          config: cliff.toml
+          args: --latest --strip header
+        env:
+          OUTPUT: CHANGES.md
+
+      - name: Update CHANGELOG.md
+        if: ${{ steps.tag-check.outputs.has_v_tag == 'true' }}
+        uses: orhun/git-cliff-action@v4
+        with:
+        config: cliff.toml
+        args: --tag ${{ github.ref_name }} --prepend CHANGELOG.md
+
+      - name: Commit CHANGELOG.md
+        if: ${{ steps.tag-check.outputs.has_v_tag == 'true' }}
         run: |
-          set -euo pipefail
-
-          current_tag="${GITHUB_REF_NAME}"
-
-          # Find the latest v* tag (if any)
-          latest_v_tag="$(git tag --sort=-version:refname --list 'v*' | head -n 1 || true)"
-
-          if [[ "${{ steps.tag-check.outputs.has_v_tag }}" == "true" ]]; then
-            # We are on a v* tag: find previous v* tag for changelog range
-            previous_tag="$(git tag --sort=-version:refname --list 'v*' | grep -Fxv "$current_tag" | grep -v -i 'SNAPSHOT' | head -n 1 || true)"
-            if [ -n "$previous_tag" ]; then
-              range="${previous_tag}..HEAD"
-            else
-              range="HEAD"
-            fi
-          else
-            # Not on a v* tag (snapshot): changelog from latest v* tag to HEAD
-            if [ -n "$latest_v_tag" ]; then
-              range="${latest_v_tag}..HEAD"
-            else
-              # No v* tags yet: use all history
-              range="HEAD"
-            fi
-          fi
-
-          notes="$(git log --no-merges --pretty=format:'- %s' "$range" 2>/dev/null || true)"
-          if [ -z "$notes" ]; then
-            notes="- No commit messages available."
-          fi
-
-          delimiter="$(openssl rand -hex 8)"
-          {
-            echo "notes<<${delimiter}"
-            echo "$notes"
-            echo "${delimiter}"
-          } >> "$GITHUB_OUTPUT"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add CHANGELOG.md
+          git diff --staged --quiet || git commit -m "chore(changelog): update for ${{ github.ref_name }} [skip ci]"
+          git push origin HEAD:main
 
       - name: Compute current version (axion)
         id: version
