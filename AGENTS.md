@@ -1,11 +1,10 @@
 # AGENTS.md
 
-Project guidance for AI coding agents working on the JManhunt repository.
+Project guidance for AI coding agents working on the repository.
 
 ## Project conventions
 
 - Follow the existing architecture.
-- Reuse existing services before introducing new ones.
 - Avoid duplicating logic.
 - Keep changes minimal and consistent.
 

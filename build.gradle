@@ -3,7 +3,7 @@ plugins {
     id 'java-gradle-plugin'
     id 'checkstyle'
     id 'maven-publish'
-    id 'pl.allegro.tech.build.axion-release' version '1.21.2'
+    id 'pl.allegro.tech.build.axion-release' version '1.21.3'
 }
 
 group = 'com.github.jruk8'
@@ -70,9 +70,9 @@ repositories {
 
 dependencies {
     implementation 'com.gradleup.shadow:com.gradleup.shadow.gradle.plugin:9.6.1'
-    implementation 'pl.allegro.tech.build:axion-release-plugin:1.21.2'
-    testImplementation 'org.junit.jupiter:junit-jupiter:5.10.2'
-    testRuntimeOnly 'org.junit.platform:junit-platform-launcher:1.10.2'
+    implementation 'pl.allegro.tech.build:axion-release-plugin:1.21.3'
+    testImplementation 'org.junit.jupiter:junit-jupiter:6.1.2'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher:6.1.2'
 }
 
 gradlePlugin {
