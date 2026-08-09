@@ -1,4 +1,15 @@
 # Changelog
+## [1.2.5] - 2026-08-09
+
+### Bug Fixes
+
+- Changelog generation
+
+
+### Miscellaneous
+
+- Update for v1.2.4 [skip ci]
+
 ## [1.2.4] - 2026-08-08
 
 ### Bug Fixes
