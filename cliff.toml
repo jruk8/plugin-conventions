@@ -10,6 +10,11 @@ body = """
 ### {{ group }}
 {% for commit in commits %}
 - {{ commit.message | upper_first }}{% if commit.breaking %} **[BREAKING]**{% endif %}
+{% if commit.body %}\
+{% for line in commit.body | split(pat="\n") %}
+  > {{ line }}\
+{% endfor %}
+{% endif %}\
 {% endfor %}
 {% endfor %}
 """
