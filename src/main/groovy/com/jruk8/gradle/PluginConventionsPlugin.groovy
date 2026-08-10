@@ -5,6 +5,7 @@ import org.gradle.api.Project
 import org.gradle.api.GradleException
 import org.gradle.api.tasks.compile.JavaCompile
 import org.gradle.jvm.toolchain.JavaLanguageVersion
+import java.util.jar.JarFile
 
 /**
  * Shared build conventions for jruk8 Paper/Bukkit plugins.
@@ -107,15 +108,32 @@ class PluginConventionsPlugin implements Plugin<Project> {
             mavenCentral()
             maven { url = 'https://repo.papermc.io/repository/maven-public/' }
             maven { url = 'https://maven.enginehub.org/repo/' }
+            maven { url = 'https://jitpack.io' }
         }
 
         // --- Dependencies ---
         String paperApiVersion = project.property('paperApiVersion')
+
+        // Lazy provider to resolve the MockBukkit manifest attribute after configurations are setup
+        def mockBukkitPaperVersionProvider = project.provider {
+            getMockBukkitPaperVersion(project)
+        }
+
         project.dependencies {
             compileOnly "io.papermc.paper:paper-api:${paperApiVersion}"
             implementation 'org.bstats:bstats-bukkit:3.2.1'
             testImplementation 'org.junit.jupiter:junit-jupiter:5.10.2'
             testRuntimeOnly 'org.junit.platform:junit-platform-launcher:1.10.2'
+
+            // Testing
+            testImplementation 'org.mockito:mockito-core:5.23.0'
+            testImplementation 'org.mockito:mockito-junit-jupiter:5.23.0'
+            testImplementation 'com.github.MockBukkit:MockBukkit:v26.1.2-SNAPSHOT'
+            testImplementation(project.dependencies.create("io.papermc.paper:paper-api") {
+                version {
+                    strictly mockBukkitPaperVersionProvider.get()
+                }
+            })
         }
 
         // --- Checkstyle ---
@@ -179,19 +197,47 @@ class PluginConventionsPlugin implements Plugin<Project> {
         project.tasks.named('processResources').configure {
             String paperApi = project.property('paperApiVersion')
             Map<String, Object> pluginProperties = [
-                    version   : project.version,
-                    name      : project.property('pluginName'),
-                    main      : project.property('pluginMain'),
-                    apiVersion: paperApi.split('\\.build\\.')[0],
-                    author    : project.property('pluginAuthor'),
+                    version    : project.version,
+                    name       : project.property('pluginName'),
+                    main       : project.property('pluginMain'),
+                    apiVersion : paperApi.split('\\.build\\.')[0],
+                    author     : project.property('pluginAuthor'),
                     description: project.property('pluginDescription'),
-                    website   : project.property('pluginWebsite')
+                    website    : project.property('pluginWebsite')
             ]
             inputs.properties(pluginProperties)
             filesMatching('plugin.yml') {
                 expand(pluginProperties)
             }
         }
+    }
+
+    /**
+     * Inspects resolved testImplementation artifacts to extract the Paper-Version manifest attribute
+     * injected by MockBukkit.
+     */
+    private static String getMockBukkitPaperVersion(Project project) {
+        try {
+            def testCompileClasspath = project.configurations.findByName('testCompileClasspath') ?: project.configurations.testImplementation
+            File mockbukkitJar = testCompileClasspath.resolvedConfiguration.lenientConfiguration.files.find {
+                it.name.toLowerCase().contains('mockbukkit')
+            }
+
+            if (mockbukkitJar) {
+                JarFile jarFile = new JarFile(mockbukkitJar)
+                try {
+                    String paperVersion = jarFile.manifest?.mainAttributes?.getValue('Paper-Version')
+                    if (paperVersion) {
+                        return paperVersion
+                    }
+                } finally {
+                    jarFile.close()
+                }
+            }
+        } catch (Exception ignored) {
+            // Fallback if configuration isn't resolvable yet or file IO fails
+        }
+        return '26.2'
     }
 
     /**
