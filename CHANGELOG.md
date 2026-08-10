@@ -1,4 +1,10 @@
 # Changelog
+## [1.2.7] - 2026-08-10
+
+### Bug Fixes
+
+- Changelog not showing on releases
+
 ## [1.2.6] - 2026-08-10
 
 ### Bug Fixes
