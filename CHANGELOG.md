@@ -1,4 +1,15 @@
 # Changelog
+## [1.3.1] - 2026-08-10
+
+### Bug Fixes
+
+- Resolve testCompileClasspath
+
+
+### Miscellaneous
+
+- Update for main [skip ci]
+
 ## [1.3.0] - 2026-08-10
 
 ### Features
