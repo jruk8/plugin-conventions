@@ -105,7 +105,7 @@ jobs:
           game-versions: ${{ vars.MODRINTH_GAME_VERSIONS }}
           version: ${{ github.ref_name }}
           name: ${{ github.event.repository.name }} ${{ github.ref_name }}
-          changelog: ${{ steps.changelog.outputs.notes }}
+          changelog: ${{ steps.changelog.outputs.content }}
 
       # ---------- GitHub release ----------
       # Full release on v* tags
@@ -115,7 +115,7 @@ jobs:
         with:
           files: build/libs/*.jar
           token: ${{ secrets.GH_RELEASE_TOKEN }}
-          body: ${{ steps.changelog.outputs.notes }}
+          body: ${{ steps.changelog.outputs.content }}
           tag_name: ${{ github.ref_name }}
           name: ${{ github.ref_name }}
           prerelease: false
@@ -224,7 +224,7 @@ jobs:
         with:
           files: build/libs/*.jar
           token: ${{ secrets.GH_RELEASE_TOKEN }}
-          body: ${{ steps.changelog.outputs.notes }}
+          body: ${{ steps.changelog.outputs.content }}
           tag_name: latest-snapshot
           name: "v${{ steps.version.outputs.version }}"
           prerelease: true
