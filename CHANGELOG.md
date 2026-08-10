@@ -1,4 +1,15 @@
 # Changelog
+## [1.3.3] - 2026-08-10
+
+### Miscellaneous
+
+- Update for v1.3.2 [skip ci]
+
+
+### Other
+
+- Dynamic mockbukkit version resolution
+
 ## [1.3.2] - 2026-08-10
 
 ### Bug Fixes
