@@ -5,10 +5,26 @@ import org.gradle.api.Project
 import org.gradle.api.GradleException
 import org.gradle.api.tasks.compile.JavaCompile
 import org.gradle.jvm.toolchain.JavaLanguageVersion
-import java.util.jar.JarFile
 
 /**
  * Shared build conventions for jruk8 Paper/Bukkit plugins.
+ *
+ * <p>Encapsulates the common build configuration that was previously duplicated across plugin
+ * repositories: Java 25 toolchain, checkstyle, shadow + bstats relocation, axion-release
+ * versioning, repository declarations, dependency defaults, and {@code plugin.yml} resource
+ * expansion from {@code gradle.properties}.
+ *
+ * <p>A consuming plugin only needs to declare this plugin in its {@code build.gradle} and keep
+ * the seven plugin-specific properties in {@code gradle.properties}:
+ * <ul>
+ *   <li>{@code pluginGroup} &mdash; base package / shadow relocation target
+ *   <li>{@code pluginName} &mdash; human-readable name injected into {@code plugin.yml}
+ *   <li>{@code pluginMain} &mdash; fully-qualified main class
+ *   <li>{@code pluginAuthor} &mdash; author injected into {@code plugin.yml}
+ *   <li>{@code pluginDescription} &mdash; description injected into {@code plugin.yml}
+ *   <li>{@code pluginWebsite} &mdash; website injected into {@code plugin.yml}
+ *   <li>{@code paperApiVersion} &mdash; Paper API dependency version (e.g. {@code 26.2.build.+})
+ * </ul>
  */
 class PluginConventionsPlugin implements Plugin<Project> {
 
@@ -47,7 +63,7 @@ class PluginConventionsPlugin implements Plugin<Project> {
 
                 String range = previousTag ? "${previousTag}..HEAD" : "HEAD"
 
-                Process logProc = ['git', 'log', '--no-merges', '--pretty=format:%s%n%b%n===END===\n', range]
+                Process logProc = ['git', 'log', '--no-merges', '--pretty=format:%s%n%b%n===END===', range]
                         .execute(null, project.projectDir)
                 logProc.waitFor()
                 String commits = logProc.text
@@ -73,6 +89,9 @@ class PluginConventionsPlugin implements Plugin<Project> {
 
         project.version = scmVersionExt.version
 
+        // If we're building locally (not CI) and the work tree has staged or unstaged
+        // changes, force a -SNAPSHOT version even when HEAD sits exactly on a release tag.
+        // Axion only accounts for commit position relative to tags, not working-tree state.
         if (isLocalDirtyBuild(project) && !project.version.toString().contains('-SNAPSHOT')) {
             project.version = "${project.version}-SNAPSHOT"
         }
@@ -88,16 +107,10 @@ class PluginConventionsPlugin implements Plugin<Project> {
             mavenCentral()
             maven { url = 'https://repo.papermc.io/repository/maven-public/' }
             maven { url = 'https://maven.enginehub.org/repo/' }
-            maven { url = 'https://jitpack.io' }
         }
 
         // --- Dependencies ---
         String paperApiVersion = project.property('paperApiVersion')
-
-        // Derives major target (e.g. "26.2.build.+" -> "26.1.2" or "1.21") for JitPack release tags
-        String paperBaseVersion = paperApiVersion.split('\\.build\\.')[0]
-        String mockBukkitCoordinate = "com.github.MockBukkit:MockBukkit:v${paperBaseVersion}-SNAPSHOT"
-
         project.dependencies {
             compileOnly "io.papermc.paper:paper-api:${paperApiVersion}"
             implementation 'org.bstats:bstats-bukkit:3.2.1'
@@ -107,19 +120,7 @@ class PluginConventionsPlugin implements Plugin<Project> {
             // Testing
             testImplementation 'org.mockito:mockito-core:5.23.0'
             testImplementation 'org.mockito:mockito-junit-jupiter:5.23.0'
-            testImplementation mockBukkitCoordinate
-        }
-
-        // Intercept test execution dependency resolution to align test Paper API version
-        project.configurations.named('testCompileClasspath').configure {
-            resolutionStrategy.eachDependency { details ->
-                if (details.requested.group == 'io.papermc.paper' && details.requested.name == 'paper-api') {
-                    String extractedVersion = getMockBukkitPaperVersion(project, mockBukkitCoordinate)
-                    if (extractedVersion) {
-                        details.useVersion(extractedVersion)
-                    }
-                }
-            }
+            testImplementation 'com.github.seeseemelk:MockBukkit-v1.21:3.133.2'
         }
 
         // --- Checkstyle ---
@@ -183,13 +184,13 @@ class PluginConventionsPlugin implements Plugin<Project> {
         project.tasks.named('processResources').configure {
             String paperApi = project.property('paperApiVersion')
             Map<String, Object> pluginProperties = [
-                    version    : project.version,
-                    name       : project.property('pluginName'),
-                    main       : project.property('pluginMain'),
-                    apiVersion : paperApi.split('\\.build\\.')[0],
-                    author     : project.property('pluginAuthor'),
+                    version   : project.version,
+                    name      : project.property('pluginName'),
+                    main      : project.property('pluginMain'),
+                    apiVersion: paperApi.split('\\.build\\.')[0],
+                    author    : project.property('pluginAuthor'),
                     description: project.property('pluginDescription'),
-                    website    : project.property('pluginWebsite')
+                    website   : project.property('pluginWebsite')
             ]
             inputs.properties(pluginProperties)
             filesMatching('plugin.yml') {
@@ -198,30 +199,10 @@ class PluginConventionsPlugin implements Plugin<Project> {
         }
     }
 
-    private static String getMockBukkitPaperVersion(Project project, String mockBukkitCoordinate) {
-        try {
-            def detached = project.configurations.detachedConfiguration(
-                    project.dependencies.create(mockBukkitCoordinate)
-            )
-            File mockbukkitJar = detached.files.find { it.name.toLowerCase().contains('mockbukkit') }
-
-            if (mockbukkitJar) {
-                JarFile jarFile = new JarFile(mockbukkitJar)
-                try {
-                    String paperVersion = jarFile.manifest?.mainAttributes?.getValue('Paper-Version')
-                    if (paperVersion) {
-                        return paperVersion
-                    }
-                } finally {
-                    jarFile.close()
-                }
-            }
-        } catch (Exception ignored) {
-            // Fallback if network/offline failure occurs during detached resolution
-        }
-        return '1.21-R0.1-SNAPSHOT'
-    }
-
+    /**
+     * Returns true if this is a local (non-CI) build and the working tree has staged
+     * or unstaged changes relative to HEAD.
+     */
     private static boolean isLocalDirtyBuild(Project project) {
         boolean isCiBuild = System.getenv('GITHUB_RUN_NUMBER') != null
         if (isCiBuild) {
@@ -232,6 +213,7 @@ class PluginConventionsPlugin implements Plugin<Project> {
             process.waitFor()
             return process.text.trim().length() > 0
         } catch (IOException ignored) {
+            // git not available / not a git repo — treat as clean rather than fail the build
             return false
         }
     }
