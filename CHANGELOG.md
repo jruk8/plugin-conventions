@@ -1,4 +1,15 @@
 # Changelog
+## [1.3.0] - 2026-08-10
+
+### Features
+
+- Add mockbukkit/mockito auto deps
+
+
+### Miscellaneous
+
+- Update for main [skip ci]
+
 ## [1.2.8] - 2026-08-10
 
 ### Bug Fixes
