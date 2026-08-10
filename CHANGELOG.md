@@ -1,4 +1,15 @@
 # Changelog
+## [1.2.6] - 2026-08-10
+
+### Bug Fixes
+
+- Update checkstyle
+
+
+### Miscellaneous
+
+- Update for main [skip ci]
+
 ## [1.2.5] - 2026-08-09
 
 ### Bug Fixes
