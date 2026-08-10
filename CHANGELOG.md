@@ -1,4 +1,15 @@
 # Changelog
+## [1.3.2] - 2026-08-10
+
+### Bug Fixes
+
+- Mockbukkit resolution
+
+
+### Miscellaneous
+
+- Update for main [skip ci]
+
 ## [1.3.1] - 2026-08-10
 
 ### Bug Fixes
