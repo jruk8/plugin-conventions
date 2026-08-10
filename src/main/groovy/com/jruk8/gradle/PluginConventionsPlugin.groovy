@@ -9,23 +9,6 @@ import java.util.jar.JarFile
 
 /**
  * Shared build conventions for jruk8 Paper/Bukkit plugins.
- *
- * <p>Encapsulates the common build configuration that was previously duplicated across plugin
- * repositories: Java 25 toolchain, checkstyle, shadow + bstats relocation, axion-release
- * versioning, repository declarations, dependency defaults, and {@code plugin.yml} resource
- * expansion from {@code gradle.properties}.
- *
- * <p>A consuming plugin only needs to declare this plugin in its {@code build.gradle} and keep
- * the seven plugin-specific properties in {@code gradle.properties}:
- * <ul>
- *   <li>{@code pluginGroup} &mdash; base package / shadow relocation target
- *   <li>{@code pluginName} &mdash; human-readable name injected into {@code plugin.yml}
- *   <li>{@code pluginMain} &mdash; fully-qualified main class
- *   <li>{@code pluginAuthor} &mdash; author injected into {@code plugin.yml}
- *   <li>{@code pluginDescription} &mdash; description injected into {@code plugin.yml}
- *   <li>{@code pluginWebsite} &mdash; website injected into {@code plugin.yml}
- *   <li>{@code paperApiVersion} &mdash; Paper API dependency version (e.g. {@code 26.2.build.+})
- * </ul>
  */
 class PluginConventionsPlugin implements Plugin<Project> {
 
@@ -33,6 +16,8 @@ class PluginConventionsPlugin implements Plugin<Project> {
             'pluginGroup', 'pluginName', 'pluginMain', 'pluginAuthor',
             'pluginDescription', 'pluginWebsite', 'paperApiVersion'
     ]
+
+    private static final String MOCKBUKKIT_DEPENDENCY = 'com.github.MockBukkit:MockBukkit:v26.1.2-SNAPSHOT'
 
     @Override
     void apply(Project project) {
@@ -64,7 +49,7 @@ class PluginConventionsPlugin implements Plugin<Project> {
 
                 String range = previousTag ? "${previousTag}..HEAD" : "HEAD"
 
-                Process logProc = ['git', 'log', '--no-merges', '--pretty=format:%s%n%b%n===END===', range]
+                Process logProc = ['git', 'log', '--no-merges', '--pretty=format:%s%n%b%n===END===\n', range]
                         .execute(null, project.projectDir)
                 logProc.waitFor()
                 String commits = logProc.text
@@ -90,9 +75,6 @@ class PluginConventionsPlugin implements Plugin<Project> {
 
         project.version = scmVersionExt.version
 
-        // If we're building locally (not CI) and the work tree has staged or unstaged
-        // changes, force a -SNAPSHOT version even when HEAD sits exactly on a release tag.
-        // Axion only accounts for commit position relative to tags, not working-tree state.
         if (isLocalDirtyBuild(project) && !project.version.toString().contains('-SNAPSHOT')) {
             project.version = "${project.version}-SNAPSHOT"
         }
@@ -114,11 +96,6 @@ class PluginConventionsPlugin implements Plugin<Project> {
         // --- Dependencies ---
         String paperApiVersion = project.property('paperApiVersion')
 
-        // Lazy provider to resolve the MockBukkit manifest attribute after configurations are setup
-        def mockBukkitPaperVersionProvider = project.provider {
-            getMockBukkitPaperVersion(project)
-        }
-
         project.dependencies {
             compileOnly "io.papermc.paper:paper-api:${paperApiVersion}"
             implementation 'org.bstats:bstats-bukkit:3.2.1'
@@ -128,12 +105,20 @@ class PluginConventionsPlugin implements Plugin<Project> {
             // Testing
             testImplementation 'org.mockito:mockito-core:5.23.0'
             testImplementation 'org.mockito:mockito-junit-jupiter:5.23.0'
-            testImplementation 'com.github.MockBukkit:MockBukkit:v26.1.2-SNAPSHOT'
-            testImplementation(project.dependencies.create("io.papermc.paper:paper-api") {
-                version {
-                    strictly mockBukkitPaperVersionProvider.get()
+            testImplementation MOCKBUKKIT_DEPENDENCY
+        }
+
+        // Resolve Paper API for testImplementation lazily via resolution strategy
+        // to avoid inspecting configurations before they are sealed.
+        project.configurations.named('testCompileClasspath').configure {
+            resolutionStrategy.eachDependency { details ->
+                if (details.requested.group == 'io.papermc.paper' && details.requested.name == 'paper-api') {
+                    String extractedVersion = getMockBukkitPaperVersion(project)
+                    if (extractedVersion) {
+                        details.useVersion(extractedVersion)
+                    }
                 }
-            })
+            }
         }
 
         // --- Checkstyle ---
@@ -213,15 +198,15 @@ class PluginConventionsPlugin implements Plugin<Project> {
     }
 
     /**
-     * Inspects resolved testImplementation artifacts to extract the Paper-Version manifest attribute
-     * injected by MockBukkit.
+     * Resolves MockBukkit isolated inside a detached configuration to read the manifest
+     * attribute without prematurely observing or locking project-level configurations.
      */
     private static String getMockBukkitPaperVersion(Project project) {
         try {
-            def testCompileClasspath = project.configurations.findByName('testCompileClasspath') ?: project.configurations.testImplementation
-            File mockbukkitJar = testCompileClasspath.resolvedConfiguration.lenientConfiguration.files.find {
-                it.name.toLowerCase().contains('mockbukkit')
-            }
+            def detached = project.configurations.detachedConfiguration(
+                    project.dependencies.create(MOCKBUKKIT_DEPENDENCY)
+            )
+            File mockbukkitJar = detached.files.find { it.name.toLowerCase().contains('mockbukkit') }
 
             if (mockbukkitJar) {
                 JarFile jarFile = new JarFile(mockbukkitJar)
@@ -235,15 +220,11 @@ class PluginConventionsPlugin implements Plugin<Project> {
                 }
             }
         } catch (Exception ignored) {
-            // Fallback if configuration isn't resolvable yet or file IO fails
+            // Fallback if network/offline failure occurs during detached resolution
         }
         return '26.2'
     }
 
-    /**
-     * Returns true if this is a local (non-CI) build and the working tree has staged
-     * or unstaged changes relative to HEAD.
-     */
     private static boolean isLocalDirtyBuild(Project project) {
         boolean isCiBuild = System.getenv('GITHUB_RUN_NUMBER') != null
         if (isCiBuild) {
@@ -254,7 +235,6 @@ class PluginConventionsPlugin implements Plugin<Project> {
             process.waitFor()
             return process.text.trim().length() > 0
         } catch (IOException ignored) {
-            // git not available / not a git repo — treat as clean rather than fail the build
             return false
         }
     }
