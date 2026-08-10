@@ -17,8 +17,6 @@ class PluginConventionsPlugin implements Plugin<Project> {
             'pluginDescription', 'pluginWebsite', 'paperApiVersion'
     ]
 
-    private static final String MOCKBUKKIT_DEPENDENCY = 'com.github.MockBukkit:MockBukkit:v26.1.2-SNAPSHOT'
-
     @Override
     void apply(Project project) {
         validateProperties(project)
@@ -96,6 +94,10 @@ class PluginConventionsPlugin implements Plugin<Project> {
         // --- Dependencies ---
         String paperApiVersion = project.property('paperApiVersion')
 
+        // Derives major target (e.g. "26.2.build.+" -> "26.1.2" or "1.21") for JitPack release tags
+        String paperBaseVersion = paperApiVersion.split('\\.build\\.')[0]
+        String mockBukkitCoordinate = "com.github.MockBukkit:MockBukkit:v${paperBaseVersion}-SNAPSHOT"
+
         project.dependencies {
             compileOnly "io.papermc.paper:paper-api:${paperApiVersion}"
             implementation 'org.bstats:bstats-bukkit:3.2.1'
@@ -105,15 +107,14 @@ class PluginConventionsPlugin implements Plugin<Project> {
             // Testing
             testImplementation 'org.mockito:mockito-core:5.23.0'
             testImplementation 'org.mockito:mockito-junit-jupiter:5.23.0'
-            testImplementation MOCKBUKKIT_DEPENDENCY
+            testImplementation mockBukkitCoordinate
         }
 
-        // Resolve Paper API for testImplementation lazily via resolution strategy
-        // to avoid inspecting configurations before they are sealed.
+        // Intercept test execution dependency resolution to align test Paper API version
         project.configurations.named('testCompileClasspath').configure {
             resolutionStrategy.eachDependency { details ->
                 if (details.requested.group == 'io.papermc.paper' && details.requested.name == 'paper-api') {
-                    String extractedVersion = getMockBukkitPaperVersion(project)
+                    String extractedVersion = getMockBukkitPaperVersion(project, mockBukkitCoordinate)
                     if (extractedVersion) {
                         details.useVersion(extractedVersion)
                     }
@@ -197,14 +198,10 @@ class PluginConventionsPlugin implements Plugin<Project> {
         }
     }
 
-    /**
-     * Resolves MockBukkit isolated inside a detached configuration to read the manifest
-     * attribute without prematurely observing or locking project-level configurations.
-     */
-    private static String getMockBukkitPaperVersion(Project project) {
+    private static String getMockBukkitPaperVersion(Project project, String mockBukkitCoordinate) {
         try {
             def detached = project.configurations.detachedConfiguration(
-                    project.dependencies.create(MOCKBUKKIT_DEPENDENCY)
+                    project.dependencies.create(mockBukkitCoordinate)
             )
             File mockbukkitJar = detached.files.find { it.name.toLowerCase().contains('mockbukkit') }
 
@@ -222,7 +219,7 @@ class PluginConventionsPlugin implements Plugin<Project> {
         } catch (Exception ignored) {
             // Fallback if network/offline failure occurs during detached resolution
         }
-        return '26.2'
+        return '1.21-R0.1-SNAPSHOT'
     }
 
     private static boolean isLocalDirtyBuild(Project project) {
