@@ -1,4 +1,15 @@
 # Changelog
+## [1.2.8] - 2026-08-10
+
+### Bug Fixes
+
+- Concurrency
+
+
+### Miscellaneous
+
+- Update for main [skip ci]
+
 ## [1.2.7] - 2026-08-10
 
 ### Bug Fixes
