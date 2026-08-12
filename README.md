@@ -219,8 +219,9 @@ When applied to a project, the plugin:
   JUnit 5 (`testImplementation`).
 - Configures Checkstyle with the bundled `checkstyle.xml` (LineLength 120,
   AvoidStarImport, UnusedImports, NeedBraces).
-- Configures `shadowJar` to relocate bstats into the plugin's package and
-  disables the plain `jar` task.
+- Configures `shadowJar` to include all runtime dependencies (including
+  any the consuming plugin declares) and relocates bstats into the plugin's
+  package, and disables the plain `jar` task.
 - Configures `processResources` to expand `plugin.yml` with values from
   `gradle.properties` and the computed version.
 - Configures axion-release with `v` tag prefix, CI-aware snapshot

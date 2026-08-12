@@ -159,9 +159,6 @@ class PluginConventionsPlugin implements Plugin<Project> {
         project.plugins.withId('com.gradleup.shadow') {
             project.tasks.named('shadowJar').configure {
                 configurations = [project.configurations.runtimeClasspath]
-                dependencies {
-                    include(dependency('org.bstats:.*:.*'))
-                }
                 relocate('org.bstats', pluginGroup)
                 archiveClassifier = ''
             }
