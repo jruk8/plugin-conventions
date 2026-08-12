@@ -1,4 +1,15 @@
 # Changelog
+## [1.3.4] - 2026-08-12
+
+### Bug Fixes
+
+- Mkdocs pipeline
+
+
+### Miscellaneous
+
+- Update for main [skip ci]
+
 ## [1.3.3] - 2026-08-10
 
 ### Miscellaneous
