@@ -1,4 +1,15 @@
 # Changelog
+## [1.3.5] - 2026-08-12
+
+### Bug Fixes
+
+- Consumer deps not being shadowed
+
+
+### Miscellaneous
+
+- Update for main [skip ci]
+
 ## [1.3.4] - 2026-08-12
 
 ### Bug Fixes
