@@ -15,7 +15,7 @@ on:
         required: false
 
 concurrency:
-  group: publish-${{ github.repository }}
+  group: publish-${{ github.repository }}-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
@@ -29,6 +29,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
         with:
+          ref: ${{ github.sha }}
           fetch-depth: 0
 
       - name: Set up JDK ${{ inputs.java-version }}
@@ -46,13 +47,11 @@ jobs:
       - name: Build
         run: ./gradlew build
 
-      - name: Detect if this commit has a v* tag
+      - name: Detect if this run is a tag push
         id: tag-check
         shell: bash
         run: |
-          set -euo pipefail
-          # Check if current commit (HEAD) has any v*.*.* tag
-          if git describe --tags --exact-match --match 'v*' HEAD >/dev/null 2>&1; then
+          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
             echo "has_v_tag=true" >> "$GITHUB_OUTPUT"
           else
             echo "has_v_tag=false" >> "$GITHUB_OUTPUT"
