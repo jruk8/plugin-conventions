@@ -53,7 +53,7 @@ class PluginConventionsPlugin implements Plugin<Project> {
                 prefix = 'v'
                 versionSeparator = ''
             }
-            snapshotCreator { version, position -> "${version}-SNAPSHOT" }
+            snapshotCreator { version, position -> "${version}-SNAPSHOT".toString() }
 
             versionIncrementer { context ->
                 Process tagProc = ['git', 'tag', '--sort=-version:refname', '--list', 'v*', '--merged', 'HEAD', '--no-contains', 'HEAD']
