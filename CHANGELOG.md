@@ -1,4 +1,15 @@
 # Changelog
+## [1.3.6] - 2026-08-16
+
+### Bug Fixes
+
+- Potential issue with shadow relocation
+
+
+### Miscellaneous
+
+- Update for v1.3.5 [skip ci]
+
 ## [1.3.5] - 2026-08-12
 
 ### Bug Fixes
