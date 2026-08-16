@@ -1,4 +1,15 @@
 # Changelog
+## [1.3.9] - 2026-08-16
+
+### Bug Fixes
+
+- Ci (please)
+
+
+### Miscellaneous
+
+- Update for main [skip ci]
+
 ## [1.3.8] - 2026-08-16
 
 ### Build & CI
