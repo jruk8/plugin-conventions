@@ -49,6 +49,9 @@ class PluginConventionsPlugin implements Plugin<Project> {
         // --- Axion versioning ---
         def scmVersionExt = project.extensions.getByName('scmVersion')
         Closure scmVersionConfig = {
+            repository {
+                pushTagsOnly = true
+            }
             tag {
                 prefix = 'v'
                 versionSeparator = ''
