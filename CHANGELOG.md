@@ -1,4 +1,10 @@
 # Changelog
+## [1.3.11] - 2026-08-16
+
+### Bug Fixes
+
+- Optional[REJECTED_NONFASTFORWARD] on ./gradlew release
+
 ## [1.3.10] - 2026-08-16
 
 ### Bug Fixes
