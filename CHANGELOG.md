@@ -1,4 +1,10 @@
 # Changelog
+## [1.3.10] - 2026-08-16
+
+### Bug Fixes
+
+- Snapshot 'null' suffix
+
 ## [1.3.9] - 2026-08-16
 
 ### Bug Fixes
