@@ -56,7 +56,10 @@ class PluginConventionsPlugin implements Plugin<Project> {
                 prefix = 'v'
                 versionSeparator = ''
             }
-            snapshotCreator { version, position -> "${version}-SNAPSHOT".toString() }
+            snapshotCreator { version, position ->
+                String buildNumber = System.getenv('GITHUB_RUN_NUMBER')
+                (buildNumber ? "-SNAPSHOT.${buildNumber}" : "-SNAPSHOT").toString()
+            }
 
             versionIncrementer { context ->
                 Process tagProc = ['git', 'tag', '--sort=-version:refname', '--list', 'v*', '--merged', 'HEAD', '--no-contains', 'HEAD']
