@@ -155,11 +155,13 @@ class PluginConventionsPlugin implements Plugin<Project> {
             options.release = 25
         }
 
-        // --- Shadow jar (bstats relocation) ---
+        // --- Shadow jar (relocations) ---
         project.plugins.withId('com.gradleup.shadow') {
             project.tasks.named('shadowJar').configure {
                 configurations = [project.configurations.runtimeClasspath]
-                relocate('org.bstats', pluginGroup)
+
+                String targetLibPackage = "${pluginGroup}.libs"
+                relocate('org.bstats', "${targetLibPackage}.bstats")
                 archiveClassifier = ''
             }
             project.tasks.named('jar').configure {
