@@ -1,4 +1,10 @@
 # Changelog
+## [1.3.12] - 2026-08-16
+
+### Bug Fixes
+
+- Concatenated version on snapshots
+
 ## [1.3.11] - 2026-08-16
 
 ### Bug Fixes
