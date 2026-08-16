@@ -1,4 +1,10 @@
 # Changelog
+## [1.3.8] - 2026-08-16
+
+### Build & CI
+
+- Fix publish.yml changelog amend
+
 ## [1.3.7] - 2026-08-16
 
 ### Build & CI
