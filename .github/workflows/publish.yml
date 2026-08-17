@@ -4,6 +4,11 @@
 #
 # Consuming repos reference it via:
 #   uses: jruk8/plugin-conventions/.github/workflows/publish.yml@v1.0.0
+#
+# Design note: release tags are pushed by the developer and are NEVER rewritten
+# by this workflow. The changelog is recorded on `main` as a separate, best-effort
+# follow-up commit after the release has already been published, so a plain
+# `git pull` is always enough — no `--force` fetching required.
 name: Publish
 
 on:
@@ -24,6 +29,8 @@ jobs:
     permissions:
       contents: write
       packages: read
+    outputs:
+      is_release: ${{ steps.tag-check.outputs.has_v_tag }}
 
     steps:
       - name: Checkout
@@ -57,7 +64,7 @@ jobs:
             echo "has_v_tag=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Generate changelog
+      - name: Generate release notes
         id: changelog
         uses: orhun/git-cliff-action@v4
         with:
@@ -65,27 +72,6 @@ jobs:
           args: --latest --strip header
         env:
           OUTPUT: CHANGES.md
-
-      - name: Update CHANGELOG.md
-        if: ${{ steps.tag-check.outputs.has_v_tag == 'true' }}
-        uses: orhun/git-cliff-action@v4
-        with:
-          config: cliff.toml
-          args: --tag ${{ github.ref_name }} --latest --prepend CHANGELOG.md
-
-      - name: Commit CHANGELOG.md
-        if: ${{ steps.tag-check.outputs.has_v_tag == 'true' }}
-        run: |
-          set -euo pipefail
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add CHANGELOG.md
-          if ! git diff --staged --quiet; then
-            git commit -m "chore(changelog): update for ${{ github.ref_name }} [skip ci]"
-            git tag -f "${{ github.ref_name }}" HEAD
-            git push origin HEAD:main
-            git push origin "${{ github.ref_name }}" --force
-          fi
 
       - name: Compute current version (axion)
         id: version
@@ -98,7 +84,7 @@ jobs:
 
       # ---------- Modrinth: only on real v* tags ----------
       - name: Publish to Modrinth
-        if: ${{ vars.MODRINTH_ID != '' && startsWith(github.ref, 'refs/tags/v') && steps.tag-check.outputs.has_v_tag == 'true' && !contains(github.ref_name, 'SNAPSHOT') }}
+        if: ${{ vars.MODRINTH_ID != '' && steps.tag-check.outputs.has_v_tag == 'true' && !contains(github.ref_name, 'SNAPSHOT') }}
         uses: Kir-Antipov/mc-publish@v3
         with:
           fail-mode: warn
@@ -113,9 +99,10 @@ jobs:
           changelog: ${{ steps.changelog.outputs.content }}
 
       # ---------- GitHub release ----------
-      # Full release on v* tags
+      # tag_name is exactly whatever the developer pushed. We never move it —
+      # the release always points at the precise commit that was built.
       - name: Publish GitHub Release (full)
-        if: ${{ startsWith(github.ref, 'refs/tags/v') && steps.tag-check.outputs.has_v_tag == 'true' }}
+        if: ${{ steps.tag-check.outputs.has_v_tag == 'true' }}
         uses: softprops/action-gh-release@v3
         with:
           files: build/libs/*.jar
@@ -129,6 +116,8 @@ jobs:
       # ---------- Snapshot cleanup on release ----------
       # If the latest release has no commits after it, the snapshot build is identical
       # to the release, so the snapshot pre-release is redundant and can be deleted.
+      # This compares the tag's own (untouched) commit against main's tip, so it
+      # reflects reality rather than something we manufactured by rewriting the tag.
       - name: Check if there are commits after the release tag
         id: release-tip-check
         if: ${{ steps.tag-check.outputs.has_v_tag == 'true' }}
@@ -136,7 +125,6 @@ jobs:
         run: |
           set -euo pipefail
 
-          # Make sure the main tip is up to date for comparison
           git fetch origin main --quiet
 
           tagged_commit="$(git rev-parse HEAD)"
@@ -159,35 +147,35 @@ jobs:
             const owner = context.repo.owner;
             const repo = context.repo.repo;
             const tagName = "latest-snapshot";
-            
+
             const releases = await github.paginate(
               github.rest.repos.listReleases,
               { owner, repo }
             );
-            
+
             const snapshotRelease = releases.find(
               release => release.tag_name === tagName
             );
-            
+
             if (snapshotRelease) {
               await github.rest.repos.deleteRelease({
                 owner,
                 repo,
                 release_id: snapshotRelease.id
               });
-            
+
               console.log("Deleted snapshot release:", snapshotRelease.id);
             } else {
               console.log("No snapshot release found; nothing to delete.");
             }
-            
+
             try {
               await github.rest.git.deleteRef({
                 owner,
                 repo,
                 ref: `tags/${tagName}`
               });
-            
+
               console.log(`Deleted tag: ${tagName}`);
             } catch (error) {
               if (error.status === 404 || (error.status === 422 && /does not exist/i.test(error.message))) {
@@ -234,3 +222,45 @@ jobs:
           name: "v${{ steps.version.outputs.version }}"
           prerelease: true
           draft: false
+
+  # Runs only after a real release has already been published above. Best-effort:
+  # if this fails (e.g. branch protection on main), the release itself is unaffected.
+  # Never touches any tag — just fast-forwards main with a normal commit.
+  update-changelog:
+    name: Record changelog on main
+    needs: publish
+    if: ${{ needs.publish.outputs.is_release == 'true' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    concurrency:
+      group: changelog-${{ github.repository }}
+      cancel-in-progress: false
+
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Update CHANGELOG.md
+        uses: orhun/git-cliff-action@v4
+        with:
+          config: cliff.toml
+          args: --tag ${{ github.ref_name }} --latest --prepend CHANGELOG.md
+        env:
+          OUTPUT: CHANGES.md
+
+      - name: Commit CHANGELOG.md
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add CHANGELOG.md
+          if ! git diff --staged --quiet; then
+            git commit -m "chore(changelog): update for ${{ github.ref_name }} [skip ci]"
+            git push origin HEAD:main
+          else
+            echo "CHANGELOG.md already up to date; nothing to commit."
+          fi

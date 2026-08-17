@@ -113,6 +113,14 @@ class PluginConventionsPlugin implements Plugin<Project> {
             mavenCentral()
             maven { url = 'https://repo.papermc.io/repository/maven-public/' }
             maven { url = 'https://maven.enginehub.org/repo/' }
+            maven {
+                name = 'okaeriReleases'
+                url = 'https://repo.okaeri.cloud/releases'
+            }
+            maven {
+                name = 'placeholderapi'
+                url = 'https://repo.extendedclip.com/content/repositories/placeholderapi/'
+            }
         }
 
         // --- Dependencies ---
@@ -127,6 +135,29 @@ class PluginConventionsPlugin implements Plugin<Project> {
             testImplementation 'org.mockito:mockito-core:5.23.0'
             testImplementation 'org.mockito:mockito-junit-jupiter:5.23.0'
             testImplementation 'com.github.seeseemelk:MockBukkit-v1.21:3.133.2'
+
+            // Lombok
+            compileOnly 'org.projectlombok:lombok:1.18.46'
+            annotationProcessor 'org.projectlombok:lombok:1.18.46'
+
+            // Okaeri Config System
+            // Core (Required)
+            implementation 'eu.okaeri:okaeri-configs-yaml-bukkit:5.0.13'
+            // Bukkit objects support (Location, ItemStack, etc.)
+            implementation 'eu.okaeri:okaeri-configs-serdes-bukkit:5.0.13'
+            // Adventure / MiniMessage & common Java types support
+            implementation 'eu.okaeri:okaeri-configs-serdes-commons:5.0.13'
+
+            // Cloud v2 Command System
+            implementation platform('org.incendo:cloud-bom:2.0.0')
+            implementation platform('org.incendo:cloud-minecraft-bom:2.0.0')
+
+            implementation 'org.incendo:cloud-annotations'
+            implementation 'org.incendo:cloud-paper'
+            implementation 'org.incendo:cloud-minecraft-extras'
+
+            // PlaceholderAPI
+            compileOnly 'me.clip:placeholderapi:2.11.6'
         }
 
         // --- Checkstyle ---
@@ -168,6 +199,8 @@ class PluginConventionsPlugin implements Plugin<Project> {
 
                 String targetLibPackage = "${pluginGroup}.libs"
                 relocate('org.bstats', "${targetLibPackage}.bstats")
+                relocate('eu.okaeri', "${targetLibPackage}.okaeri")
+                relocate('org.incendo.cloud', "${targetLibPackage}.cloud")
                 archiveClassifier = ''
             }
             project.tasks.named('jar').configure {
