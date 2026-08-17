@@ -158,6 +158,12 @@ class PluginConventionsPlugin implements Plugin<Project> {
 
             // PlaceholderAPI
             compileOnly 'me.clip:placeholderapi:2.11.6'
+
+            // SQLite JDBC driver for compilation and tests only.
+            // The runtime jar stays lean (~300 KB): the server itself bundles org.sqlite,
+            // and SqliteStorage loads it via Class.forName at runtime.
+            compileOnly 'org.xerial:sqlite-jdbc:3.50.3.0'
+            testImplementation 'org.xerial:sqlite-jdbc:3.50.3.0'
         }
 
         // --- Checkstyle ---
