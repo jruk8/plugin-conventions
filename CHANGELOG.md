@@ -1,4 +1,15 @@
 # Changelog
+## [1.4.1] - 2026-08-17
+
+### Bug Fixes
+
+- Add sqlite jdbc dependency
+
+
+### Miscellaneous
+
+- Update for v1.4.0 [skip ci]
+
 ## [1.4.0] - 2026-08-17
 
 ### Features
