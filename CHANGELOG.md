@@ -1,4 +1,10 @@
 # Changelog
+## [1.4.0] - 2026-08-17
+
+### Features
+
+- Add oekari config, incendo cloud, lombok, update publish.yml changelog script
+
 ## [1.3.13] - 2026-08-16
 
 ### Bug Fixes
