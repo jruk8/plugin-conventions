@@ -1,4 +1,15 @@
 # Changelog
+## [1.4.2] - 2026-09-05
+
+### Bug Fixes
+
+- Deadlock on git log exceeding pipe buffer
+
+
+### Miscellaneous
+
+- Update for v1.4.1 [skip ci]
+
 ## [1.4.1] - 2026-08-17
 
 ### Bug Fixes
