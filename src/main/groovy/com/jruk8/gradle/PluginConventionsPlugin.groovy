@@ -62,17 +62,29 @@ class PluginConventionsPlugin implements Plugin<Project> {
             }
 
             versionIncrementer { context ->
+                // NOTE: waitFor() must never be called before the child's stdout has been
+                // drained. The OS pipe buffer is small (~64KB on Linux); if the child writes
+                // more than that before anyone reads it, the child blocks on write() while we
+                // block on waitFor() — a permanent deadlock. waitForProcessOutput() reads the
+                // streams concurrently while waiting, so it's always safe to use instead.
                 Process tagProc = ['git', 'tag', '--sort=-version:refname', '--list', 'v*', '--merged', 'HEAD', '--no-contains', 'HEAD']
                         .execute(null, project.projectDir)
-                tagProc.waitFor()
-                String previousTag = tagProc.text.readLines().find { it?.trim() }?.trim()
+                StringBuilder tagOut = new StringBuilder()
+                StringBuilder tagErr = new StringBuilder()
+                tagProc.waitForProcessOutput(tagOut, tagErr)
+                String previousTag = tagOut.toString().readLines().find { it?.trim() }?.trim()
 
+                // When there is no previous tag (untagged repo/first release), 'range' collapses
+                // to bare 'HEAD', which git log interprets as the entire reachable history —
+                // easily large enough to overflow the pipe buffer above.
                 String range = previousTag ? "${previousTag}..HEAD" : "HEAD"
 
                 Process logProc = ['git', 'log', '--no-merges', '--pretty=format:%s%n%b%n===END===', range]
                         .execute(null, project.projectDir)
-                logProc.waitFor()
-                String commits = logProc.text
+                StringBuilder logOut = new StringBuilder()
+                StringBuilder logErr = new StringBuilder()
+                logProc.waitForProcessOutput(logOut, logErr)
+                String commits = logOut.toString()
 
                 boolean isMajor = commits =~ /(?m)^\w+(\([^)]*\))?!:/ || commits.contains('BREAKING CHANGE:') || commits.contains('BREAKING-CHANGE:')
                 boolean isMinor = commits =~ /(?m)^feat(\([^)]*\))?:/
@@ -254,8 +266,10 @@ class PluginConventionsPlugin implements Plugin<Project> {
         }
         try {
             Process process = ['git', 'status', '--porcelain'].execute(null, project.projectDir)
-            process.waitFor()
-            return process.text.trim().length() > 0
+            StringBuilder out = new StringBuilder()
+            StringBuilder err = new StringBuilder()
+            process.waitForProcessOutput(out, err)
+            return out.toString().trim().length() > 0
         } catch (IOException ignored) {
             // git not available / not a git repo — treat as clean rather than fail the build
             return false
