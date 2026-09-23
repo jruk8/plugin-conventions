@@ -219,6 +219,7 @@ class PluginConventionsPlugin implements Plugin<Project> {
                 relocate('org.bstats', "${targetLibPackage}.bstats")
                 relocate('eu.okaeri', "${targetLibPackage}.okaeri")
                 relocate('org.incendo.cloud', "${targetLibPackage}.cloud")
+                relocate('io.leangen.geantyref', "${targetLibPackage}.geantyref")
                 archiveClassifier = ''
             }
             project.tasks.named('jar').configure {
