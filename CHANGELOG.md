@@ -1,4 +1,15 @@
 # Changelog
+## [1.4.4] - 2026-09-25
+
+### Bug Fixes
+
+- Changelog snapshot gen issue
+
+
+### Miscellaneous
+
+- Update for v1.4.3 [skip ci]
+
 ## [1.4.3] - 2026-09-23
 
 ### Miscellaneous
