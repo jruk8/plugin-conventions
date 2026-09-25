@@ -51,6 +51,8 @@ and always takes precedence over the automatic detection.
 publish workflow regenerates the entry for the new tag, prepends it to
 `CHANGELOG.md`, and commits the update back to `main`. The same generated
 notes are used as the body of the GitHub Release and the Modrinth changelog.
+Snapshot pre-releases carry cumulative notes for all commits since
+the last release, headed with the snapshot version.
 
 ## Consuming the convention plugin
 

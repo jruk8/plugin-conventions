@@ -66,6 +66,7 @@ jobs:
 
       - name: Generate release notes
         id: changelog
+        if: ${{ steps.tag-check.outputs.has_v_tag == 'true' }}
         uses: orhun/git-cliff-action@v4
         with:
           config: cliff.toml
@@ -81,6 +82,25 @@ jobs:
           set -euo pipefail
           version="$(./gradlew -q -Prelease.quiet currentVersion | tail -n 1 | tr -d '[:space:]')"
           echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      # The floating latest-snapshot tag would otherwise act as a release
+      # boundary for git-cliff, freezing the snapshot notes at whatever the
+      # tag pointed to instead of covering everything since the last release.
+      - name: Remove stale local snapshot tag
+        if: ${{ github.ref == 'refs/heads/main' && steps.tag-check.outputs.has_v_tag == 'false' }}
+        shell: bash
+        run: |
+          git tag -d latest-snapshot 2>/dev/null || echo "No local latest-snapshot tag to remove."
+
+      - name: Generate snapshot notes
+        id: snapshot-changelog
+        if: ${{ github.ref == 'refs/heads/main' && steps.tag-check.outputs.has_v_tag == 'false' }}
+        uses: orhun/git-cliff-action@v4
+        with:
+          config: cliff.toml
+          args: --unreleased --tag v${{ steps.version.outputs.version }} --strip header
+        env:
+          OUTPUT: CHANGES.md
 
       # ---------- Modrinth: only on real v* tags ----------
       - name: Publish to Modrinth
@@ -185,7 +205,7 @@ jobs:
                }
             }
 
-      - name: Delete previous snapshot release
+      - name: Delete previous snapshot release and tag
         if: ${{ github.ref == 'refs/heads/main' && steps.tag-check.outputs.has_v_tag == 'false' }}
         uses: actions/github-script@v9
         with:
@@ -193,13 +213,14 @@ jobs:
           script: |
             const owner = context.repo.owner;
             const repo = context.repo.repo;
+            const tagName = "latest-snapshot";
 
             const releases = await github.paginate(
               github.rest.repos.listReleases,
               { owner, repo }
             );
 
-            const snapshotRelease = releases.find(r => r.tag_name === "latest-snapshot");
+            const snapshotRelease = releases.find(r => r.tag_name === tagName);
             if (snapshotRelease) {
               await github.rest.repos.deleteRelease({
                 owner,
@@ -211,14 +232,34 @@ jobs:
               console.log("No previous snapshot release found; nothing to delete.");
             }
 
+            // The tag must go too: action-gh-release never moves an
+            // existing tag, so recreating the release alone would leave it
+            // pinned to the previous snapshot commit.
+            try {
+              await github.rest.git.deleteRef({
+                owner,
+                repo,
+                ref: `tags/${tagName}`
+              });
+
+              console.log(`Deleted tag: ${tagName}`);
+            } catch (error) {
+              if (error.status === 404 || (error.status === 422 && /does not exist/i.test(error.message))) {
+                console.log(`Tag not found; nothing to delete: ${tagName}`);
+              } else {
+                throw error;
+              }
+            }
+
       - name: Publish GitHub Pre-release (snapshot)
         if: ${{ github.ref == 'refs/heads/main' && steps.tag-check.outputs.has_v_tag == 'false' }}
         uses: softprops/action-gh-release@v3
         with:
           files: build/libs/*.jar
           token: ${{ secrets.GH_RELEASE_TOKEN }}
-          body: ${{ steps.changelog.outputs.content }}
+          body: ${{ steps.snapshot-changelog.outputs.content }}
           tag_name: latest-snapshot
+          target_commitish: ${{ github.sha }}
           name: "v${{ steps.version.outputs.version }}"
           prerelease: true
           draft: false
