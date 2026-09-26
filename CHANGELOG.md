@@ -1,4 +1,71 @@
 # Changelog
+## [1.4.5] - 2026-09-26
+
+### Bug Fixes
+
+- Add gitattributes for lf endings
+
+- Bump the gradle-dependencies group across 1 directory with 3 updates (#7)
+
+> Bumps the gradle-dependencies group with 3 updates in the / directory: [org.junit.jupiter:junit-jupiter](https://github.com/junit-team/junit-framework), [org.junit.platform:junit-platform-launcher](https://github.com/junit-team/junit-framework) and [gradle-wrapper](https://github.com/gradle/gradle).
+> 
+> 
+> Updates `org.junit.jupiter:junit-jupiter` from 6.1.2 to 6.1.3
+> - [Release notes](https://github.com/junit-team/junit-framework/releases)
+> - [Commits](https://github.com/junit-team/junit-framework/compare/r6.1.2...r6.1.3)
+> 
+> Updates `org.junit.platform:junit-platform-launcher` from 6.1.2 to 6.1.3
+> - [Release notes](https://github.com/junit-team/junit-framework/releases)
+> - [Commits](https://github.com/junit-team/junit-framework/compare/r6.1.2...r6.1.3)
+> 
+> Updates `gradle-wrapper` from 9.6.1 to 9.7.1
+> - [Release notes](https://github.com/gradle/gradle/releases)
+> - [Commits](https://github.com/gradle/gradle/compare/v9.6.1...v9.7.1)
+> 
+> ---
+> updated-dependencies:
+> - dependency-name: gradle-wrapper
+>   dependency-version: 9.7.0
+>   dependency-type: direct:production
+>   update-type: version-update:semver-minor
+>   dependency-group: gradle-dependencies
+> - dependency-name: org.junit.jupiter:junit-jupiter
+>   dependency-version: 6.1.3
+>   dependency-type: direct:production
+>   update-type: version-update:semver-patch
+>   dependency-group: gradle-dependencies
+> - dependency-name: org.junit.platform:junit-platform-launcher
+>   dependency-version: 6.1.3
+>   dependency-type: direct:production
+>   update-type: version-update:semver-patch
+>   dependency-group: gradle-dependencies
+> ...
+
+
+### Miscellaneous
+
+- Cloud incendo to 2.0.1 to support 26.3
+
+- Update for v1.4.4 [skip ci]
+
+- Bump actions/setup-java (#9)
+
+> Bumps the actions-dependencies group with 1 update in the / directory: [actions/setup-java](https://github.com/actions/setup-java).
+> 
+> 
+> Updates `actions/setup-java` from 5 to 6
+> - [Release notes](https://github.com/actions/setup-java/releases)
+> - [Commits](https://github.com/actions/setup-java/compare/v5...v6)
+> 
+> ---
+> updated-dependencies:
+> - dependency-name: actions/setup-java
+>   dependency-version: '6'
+>   dependency-type: direct:production
+>   update-type: version-update:semver-major
+>   dependency-group: actions-dependencies
+> ...
+
 ## [1.4.4] - 2026-09-25
 
 ### Bug Fixes
