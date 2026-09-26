@@ -161,8 +161,8 @@ class PluginConventionsPlugin implements Plugin<Project> {
             implementation 'eu.okaeri:okaeri-configs-serdes-commons:5.0.13'
 
             // Cloud v2 Command System
-            implementation platform('org.incendo:cloud-bom:2.0.0')
-            implementation platform('org.incendo:cloud-minecraft-bom:2.0.0')
+            implementation platform('org.incendo:cloud-bom:2.0.1')
+            implementation platform('org.incendo:cloud-minecraft-bom:2.0.1')
 
             implementation 'org.incendo:cloud-annotations'
             implementation 'org.incendo:cloud-paper'
