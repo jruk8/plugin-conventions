@@ -1,4 +1,20 @@
 # Changelog
+## [1.4.6] - 2026-10-13
+
+### Bug Fixes
+
+- Run config-time git probes through providers.exec
+
+> Raw .execute() at configuration time is deprecated and fails on
+> Gradle 11; providers.exec is the tracked replacement and drains
+> child streams itself. Applies to the published plugin and this
+> repo's own versioning block.
+
+
+### Miscellaneous
+
+- Update for v1.4.5 [skip ci]
+
 ## [1.4.5] - 2026-09-26
 
 ### Bug Fixes
