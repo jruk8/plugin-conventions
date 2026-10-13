@@ -62,29 +62,28 @@ class PluginConventionsPlugin implements Plugin<Project> {
             }
 
             versionIncrementer { context ->
-                // NOTE: waitFor() must never be called before the child's stdout has been
-                // drained. The OS pipe buffer is small (~64KB on Linux); if the child writes
-                // more than that before anyone reads it, the child blocks on write() while we
-                // block on waitFor() — a permanent deadlock. waitForProcessOutput() reads the
-                // streams concurrently while waiting, so it's always safe to use instead.
-                Process tagProc = ['git', 'tag', '--sort=-version:refname', '--list', 'v*', '--merged', 'HEAD', '--no-contains', 'HEAD']
-                        .execute(null, project.projectDir)
-                StringBuilder tagOut = new StringBuilder()
-                StringBuilder tagErr = new StringBuilder()
-                tagProc.waitForProcessOutput(tagOut, tagErr)
-                String previousTag = tagOut.toString().readLines().find { it?.trim() }?.trim()
+                // Config-time git probes run through providers.exec: raw
+                // .execute() at configuration time is deprecated and fails
+                // on Gradle 11, and providers.exec drains the child
+                // streams itself (no pipe-buffer deadlock). Exit codes stay
+                // ignored so a missing git or tag history degrades to HEAD.
+                String previousTag = project.providers.exec {
+                    commandLine 'git', 'tag', '--sort=-version:refname', '--list', 'v*',
+                            '--merged', 'HEAD', '--no-contains', 'HEAD'
+                    workingDir project.projectDir
+                    ignoreExitValue true
+                }.standardOutput.asText.get().readLines().find { it?.trim() }?.trim()
 
                 // When there is no previous tag (untagged repo/first release), 'range' collapses
-                // to bare 'HEAD', which git log interprets as the entire reachable history —
-                // easily large enough to overflow the pipe buffer above.
+                // to bare 'HEAD', which git log interprets as the entire reachable history.
                 String range = previousTag ? "${previousTag}..HEAD" : "HEAD"
 
-                Process logProc = ['git', 'log', '--no-merges', '--pretty=format:%s%n%b%n===END===', range]
-                        .execute(null, project.projectDir)
-                StringBuilder logOut = new StringBuilder()
-                StringBuilder logErr = new StringBuilder()
-                logProc.waitForProcessOutput(logOut, logErr)
-                String commits = logOut.toString()
+                String commits = project.providers.exec {
+                    commandLine 'git', 'log', '--no-merges',
+                            '--pretty=format:%s%n%b%n===END===', range
+                    workingDir project.projectDir
+                    ignoreExitValue true
+                }.standardOutput.asText.get()
 
                 boolean isMajor = commits =~ /(?m)^\w+(\([^)]*\))?!:/ || commits.contains('BREAKING CHANGE:') || commits.contains('BREAKING-CHANGE:')
                 boolean isMinor = commits =~ /(?m)^feat(\([^)]*\))?:/
@@ -266,12 +265,13 @@ class PluginConventionsPlugin implements Plugin<Project> {
             return false
         }
         try {
-            Process process = ['git', 'status', '--porcelain'].execute(null, project.projectDir)
-            StringBuilder out = new StringBuilder()
-            StringBuilder err = new StringBuilder()
-            process.waitForProcessOutput(out, err)
-            return out.toString().trim().length() > 0
-        } catch (IOException ignored) {
+            String status = project.providers.exec {
+                commandLine 'git', 'status', '--porcelain'
+                workingDir project.projectDir
+                ignoreExitValue true
+            }.standardOutput.asText.get()
+            return status.trim().length() > 0
+        } catch (Exception ignored) {
             // git not available / not a git repo — treat as clean rather than fail the build
             return false
         }

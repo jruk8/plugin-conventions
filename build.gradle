@@ -22,17 +22,24 @@ scmVersion {
     }
 
     versionIncrementer { context ->
-        Process tagProc = ['git', 'tag', '--sort=-version:refname', '--list', 'v*', '--merged', 'HEAD', '--no-contains', 'HEAD']
-                .execute(null, project.projectDir)
-        tagProc.waitFor()
-        String previousTag = tagProc.text.readLines().find { it?.trim() }?.trim()
+        // providers.exec is the tracked replacement for raw .execute(),
+        // which Gradle 11 forbids at configuration time. Exit codes stay
+        // ignored so a missing git or tag history degrades to HEAD.
+        String previousTag = project.providers.exec {
+            commandLine 'git', 'tag', '--sort=-version:refname', '--list', 'v*',
+                    '--merged', 'HEAD', '--no-contains', 'HEAD'
+            workingDir project.projectDir
+            ignoreExitValue true
+        }.standardOutput.asText.get().readLines().find { it?.trim() }?.trim()
 
         String range = previousTag ? "${previousTag}..HEAD" : "HEAD"
 
-        Process logProc = ['git', 'log', '--no-merges', '--pretty=format:%s%n%b%n===END===', range]
-                .execute(null, project.projectDir)
-        logProc.waitFor()
-        String commits = logProc.text
+        String commits = project.providers.exec {
+            commandLine 'git', 'log', '--no-merges',
+                    '--pretty=format:%s%n%b%n===END===', range
+            workingDir project.projectDir
+            ignoreExitValue true
+        }.standardOutput.asText.get()
 
         boolean isMajor = commits =~ /(?m)^\w+(\([^)]*\))?!:/ || commits.contains('BREAKING CHANGE:') || commits.contains('BREAKING-CHANGE:')
         boolean isMinor = commits =~ /(?m)^feat(\([^)]*\))?:/
@@ -51,9 +58,17 @@ scmVersion {
 }
 
 def isWorkTreeDirty = {
-    def process = ['git', 'status', '--porcelain'].execute(null, project.projectDir)
-    process.waitFor()
-    return process.text.trim().length() > 0
+    try {
+        String status = project.providers.exec {
+            commandLine 'git', 'status', '--porcelain'
+            workingDir project.projectDir
+            ignoreExitValue true
+        }.standardOutput.asText.get()
+        return status.trim().length() > 0
+    } catch (Exception ignored) {
+        // git not available / not a git repo — treat as clean rather than fail the build
+        return false
+    }
 }
 
 def isCiBuild = System.getenv('GITHUB_RUN_NUMBER') != null
