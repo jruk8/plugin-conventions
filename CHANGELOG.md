@@ -1,4 +1,15 @@
 # Changelog
+## [1.4.7] - 2026-10-14
+
+### Bug Fixes
+
+- Move test runtime to MockBukkit v26.2 plus matching Paper API
+
+
+### Miscellaneous
+
+- Update for v1.4.6 [skip ci]
+
 ## [1.4.6] - 2026-10-13
 
 ### Bug Fixes
