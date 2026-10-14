@@ -11,9 +11,11 @@
 *.iml
 *.ipr
 *.iws
-
-# VS Code
 .vscode/
+
+# AI
+.agents
+.codex
 
 # Logs
 *.log
