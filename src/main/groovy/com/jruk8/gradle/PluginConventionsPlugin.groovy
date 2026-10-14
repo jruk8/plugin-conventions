@@ -145,7 +145,12 @@ class PluginConventionsPlugin implements Plugin<Project> {
             // Testing
             testImplementation 'org.mockito:mockito-core:5.23.0'
             testImplementation 'org.mockito:mockito-junit-jupiter:5.23.0'
-            testImplementation 'com.github.seeseemelk:MockBukkit-v1.21:3.133.2'
+            testImplementation 'org.mockbukkit.mockbukkit:mockbukkit-v26.2:4.117.0'
+            // MockBukkit 4.x ships no Paper API of its own: pin the test
+            // runtime to the same API the plugin compiles against, so tests
+            // execute against production types (Attribute.MAX_HEALTH, data
+            // components, dialogs) instead of a stale API.
+            testImplementation "io.papermc.paper:paper-api:${paperApiVersion}"
 
             // Lombok
             compileOnly 'org.projectlombok:lombok:1.18.46'
