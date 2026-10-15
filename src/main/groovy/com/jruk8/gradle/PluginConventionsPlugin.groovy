@@ -71,7 +71,7 @@ class PluginConventionsPlugin implements Plugin<Project> {
                     commandLine 'git', 'tag', '--sort=-version:refname', '--list', 'v*',
                             '--merged', 'HEAD', '--no-contains', 'HEAD'
                     workingDir project.projectDir
-                    ignoreExitValue true
+                    ignoreExitValue = true
                 }.standardOutput.asText.get().readLines().find { it?.trim() }?.trim()
 
                 // When there is no previous tag (untagged repo/first release), 'range' collapses
@@ -82,7 +82,7 @@ class PluginConventionsPlugin implements Plugin<Project> {
                     commandLine 'git', 'log', '--no-merges',
                             '--pretty=format:%s%n%b%n===END===', range
                     workingDir project.projectDir
-                    ignoreExitValue true
+                    ignoreExitValue = true
                 }.standardOutput.asText.get()
 
                 boolean isMajor = commits =~ /(?m)^\w+(\([^)]*\))?!:/ || commits.contains('BREAKING CHANGE:') || commits.contains('BREAKING-CHANGE:')
@@ -273,7 +273,7 @@ class PluginConventionsPlugin implements Plugin<Project> {
             String status = project.providers.exec {
                 commandLine 'git', 'status', '--porcelain'
                 workingDir project.projectDir
-                ignoreExitValue true
+                ignoreExitValue = true
             }.standardOutput.asText.get()
             return status.trim().length() > 0
         } catch (Exception ignored) {

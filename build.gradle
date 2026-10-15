@@ -29,7 +29,7 @@ scmVersion {
             commandLine 'git', 'tag', '--sort=-version:refname', '--list', 'v*',
                     '--merged', 'HEAD', '--no-contains', 'HEAD'
             workingDir project.projectDir
-            ignoreExitValue true
+            ignoreExitValue = true
         }.standardOutput.asText.get().readLines().find { it?.trim() }?.trim()
 
         String range = previousTag ? "${previousTag}..HEAD" : "HEAD"
@@ -38,7 +38,7 @@ scmVersion {
             commandLine 'git', 'log', '--no-merges',
                     '--pretty=format:%s%n%b%n===END===', range
             workingDir project.projectDir
-            ignoreExitValue true
+            ignoreExitValue = true
         }.standardOutput.asText.get()
 
         boolean isMajor = commits =~ /(?m)^\w+(\([^)]*\))?!:/ || commits.contains('BREAKING CHANGE:') || commits.contains('BREAKING-CHANGE:')
@@ -62,7 +62,7 @@ def isWorkTreeDirty = {
         String status = project.providers.exec {
             commandLine 'git', 'status', '--porcelain'
             workingDir project.projectDir
-            ignoreExitValue true
+            ignoreExitValue = true
         }.standardOutput.asText.get()
         return status.trim().length() > 0
     } catch (Exception ignored) {
