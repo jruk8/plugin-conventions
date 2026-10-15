@@ -1,4 +1,19 @@
 # Changelog
+## [1.4.8] - 2026-10-15
+
+### Bug Fixes
+
+- Use assignment syntax for exec ignoreExitValue
+
+> Space-call property syntax is deprecated for Gradle 10; all six providers.exec sites move to ignoreExitValue assignment.
+
+
+### Miscellaneous
+
+- Update for v1.4.7 [skip ci]
+
+- Add .gitignore
+
 ## [1.4.7] - 2026-10-14
 
 ### Bug Fixes
