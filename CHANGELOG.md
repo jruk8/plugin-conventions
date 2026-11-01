@@ -1,4 +1,53 @@
 # Changelog
+## [1.5.0] - 2026-11-01
+
+### Bug Fixes
+
+- Bump the gradle-dependencies group across 1 directory with 3 updates (#12)
+
+> Bumps the gradle-dependencies group with 3 updates in the / directory: [pl.allegro.tech.build:axion-release-plugin](https://github.com/allegro/axion-release-plugin), [pl.allegro.tech.build.axion-release](https://github.com/allegro/axion-release-plugin) and [gradle-wrapper](https://github.com/gradle/gradle).
+> 
+> 
+> Updates `pl.allegro.tech.build:axion-release-plugin` from 1.21.3 to 1.21.4
+> - [Release notes](https://github.com/allegro/axion-release-plugin/releases)
+> - [Commits](https://github.com/allegro/axion-release-plugin/compare/v1.21.3...v1.21.4)
+> 
+> Updates `pl.allegro.tech.build.axion-release` from 1.21.3 to 1.21.4
+> - [Release notes](https://github.com/allegro/axion-release-plugin/releases)
+> - [Commits](https://github.com/allegro/axion-release-plugin/compare/v1.21.3...v1.21.4)
+> 
+> Updates `gradle-wrapper` from 9.7.1 to 9.8.0
+> - [Release notes](https://github.com/gradle/gradle/releases)
+> - [Commits](https://github.com/gradle/gradle/compare/v9.7.1...v9.8.0)
+> 
+> ---
+> updated-dependencies:
+> - dependency-name: pl.allegro.tech.build:axion-release-plugin
+>   dependency-version: 1.21.4
+>   dependency-type: direct:production
+>   update-type: version-update:semver-patch
+>   dependency-group: gradle-dependencies
+> - dependency-name: pl.allegro.tech.build.axion-release
+>   dependency-version: 1.21.4
+>   dependency-type: direct:production
+>   update-type: version-update:semver-patch
+>   dependency-group: gradle-dependencies
+> - dependency-name: gradle-wrapper
+>   dependency-version: 9.8.0
+>   dependency-type: direct:production
+>   update-type: version-update:semver-minor
+>   dependency-group: gradle-dependencies
+> ...
+
+- Publish with github.token instead of GH_RELEASE_TOKEN
+
+> The shared publish workflow only touches the caller's own repo, so the default token with contents:write covers every release call. Consumers keep secrets:inherit and their permission grants; no PAT to rotate. README contract updated to match.
+
+
+### Miscellaneous
+
+- Update for v1.4.8 [skip ci]
+
 ## [1.4.8] - 2026-10-15
 
 ### Bug Fixes
