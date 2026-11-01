@@ -154,11 +154,13 @@ jobs:
 > **Note:** The `publish.yml` reusable workflow expects the following
 > repository variables and secrets to be configured on the consuming repo:
 > - **Variables:** `MODRINTH_ID`, `MODRINTH_LOADERS`, `MODRINTH_GAME_VERSIONS`
-> - **Secrets:** `MODRINTH_TOKEN`, `GH_RELEASE_TOKEN`
+> - **Secrets:** `MODRINTH_TOKEN`
 >
-> The calling job must declare `permissions: { contents: write, packages: read }`
-> explicitly — reusable workflows can never be granted more permissions
-> than the caller has, regardless of what `publish.yml` itself requests.
+> GitHub releases use the caller's `github.token`, so no release PAT is
+> needed. The calling job must declare
+> `permissions: { contents: write, packages: read }` explicitly —
+> reusable workflows can never be granted more permissions than the
+> caller has, regardless of what `publish.yml` itself requests.
 
 ### 6. Dependency updates (Dependabot)
 

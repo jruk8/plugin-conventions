@@ -126,7 +126,7 @@ jobs:
         uses: softprops/action-gh-release@v3
         with:
           files: build/libs/*.jar
-          token: ${{ secrets.GH_RELEASE_TOKEN }}
+          token: ${{ github.token }}
           body: ${{ steps.changelog.outputs.content }}
           tag_name: ${{ github.ref_name }}
           name: ${{ github.ref_name }}
@@ -162,7 +162,7 @@ jobs:
         if: ${{ steps.tag-check.outputs.has_v_tag == 'true' && steps.release-tip-check.outputs.no_commits_after == 'true' }}
         uses: actions/github-script@v9
         with:
-          github-token: ${{ secrets.GH_RELEASE_TOKEN }}
+          github-token: ${{ github.token }}
           script: |
             const owner = context.repo.owner;
             const repo = context.repo.repo;
@@ -209,7 +209,7 @@ jobs:
         if: ${{ github.ref == 'refs/heads/main' && steps.tag-check.outputs.has_v_tag == 'false' }}
         uses: actions/github-script@v9
         with:
-          github-token: ${{ secrets.GH_RELEASE_TOKEN }}
+          github-token: ${{ github.token }}
           script: |
             const owner = context.repo.owner;
             const repo = context.repo.repo;
@@ -256,7 +256,7 @@ jobs:
         uses: softprops/action-gh-release@v3
         with:
           files: build/libs/*.jar
-          token: ${{ secrets.GH_RELEASE_TOKEN }}
+          token: ${{ github.token }}
           body: ${{ steps.snapshot-changelog.outputs.content }}
           tag_name: latest-snapshot
           target_commitish: ${{ github.sha }}
